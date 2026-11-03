@@ -1,56 +1,64 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-  "timezone": "Europe/Paris",
-  "schedule": ["before 7am on monday"],
-  "labels": ["dependencies"],
-  "minimumReleaseAge": "3 days",
-  "customManagers": [
-    {
-      "customType": "regex",
-      "description": "recipe-scrapers, installed by Home Assistant from the integration manifest",
-      "managerFilePatterns": ["/^custom_components/cookbook/manifest\\.json$/"],
-      "matchStrings": ["\"(?<depName>recipe-scrapers)==(?<currentValue>[^\"]+)\""],
-      "datasourceTemplate": "pypi"
-    },
-    {
-      "customType": "regex",
-      "description": "Home Assistant image of the dev and E2E instances",
-      "managerFilePatterns": ["/^docker-compose\\.yml$/"],
-      "matchStrings": ["home-assistant:\\$\\{HA_VERSION:-(?<currentValue>[0-9.]+)\\}"],
-      "depNameTemplate": "ghcr.io/home-assistant/home-assistant",
-      "datasourceTemplate": "docker"
-    }
+  "extends": [
+    "config:recommended"
   ],
+  "timezone": "Europe/Paris",
+  "schedule": [
+    "before 7am on monday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "minimumReleaseAge": "3 days",
   "packageRules": [
     {
-      "description": "recipe-scrapers: manifest, pyproject and uv.lock in one PR (checked by tests/test_versions.py)",
-      "matchPackageNames": ["recipe-scrapers"],
+      "description": "recipe-scrapers: manifest (native homeassistant-manifest manager), pyproject and uv.lock in one PR (checked by tests/test_versions.py)",
+      "matchPackageNames": [
+        "recipe-scrapers"
+      ],
       "groupName": "recipe-scrapers"
     },
     {
-      "description": "Home Assistant: Docker image, test library and frontend package move together (checked by tests/test_versions.py)",
+      "description": "Home Assistant is driven by the test library, which pins it; the Docker image and home-assistant-frontend follow with `make sync-ha`",
       "matchPackageNames": [
-        "ghcr.io/home-assistant/home-assistant",
-        "pytest-homeassistant-custom-component",
-        "home-assistant-frontend"
+        "pytest-homeassistant-custom-component"
       ],
-      "groupName": "Home Assistant"
+      "groupName": "Home Assistant",
+      "prBodyNotes": [
+        "⚠️ Run `make sync-ha` on this branch and push: it aligns the HA Docker image and `home-assistant-frontend` on the new Home Assistant version (tests/test_versions.py fails until then)."
+      ]
     },
     {
-      "description": "Stable Home Assistant releases only (no betas)",
-      "matchPackageNames": ["ghcr.io/home-assistant/home-assistant"],
-      "allowedVersions": "/^\\d+\\.\\d+\\.\\d+$/"
+      "description": "Follows the HA version of the test library (make sync-ha), never on its own",
+      "matchPackageNames": [
+        "home-assistant-frontend"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Python version is the one required by Home Assistant, not the latest release",
+      "matchManagers": [
+        "pyenv"
+      ],
+      "enabled": false
     },
     {
       "description": "Frontend dependencies: one PR for minor and patch updates",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchManagers": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "groupName": "frontend (minor and patch)"
     },
     {
       "description": "GitHub Actions: one PR",
-      "matchManagers": ["github-actions"],
+      "matchManagers": [
+        "github-actions"
+      ],
       "groupName": "GitHub Actions"
     }
   ]

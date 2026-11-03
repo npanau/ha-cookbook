@@ -115,16 +115,20 @@ Modification TypeScript : le watch reconstruit, il suffit de recharger la page (
   - `recipe-scrapers` : `manifest.json` (installé par HA chez l'utilisateur), `pyproject.toml` et `uv.lock` ;
   - Home Assistant : image Docker (`HA_VERSION` dans `docker-compose.yml`) = version de HA imposée par
     `pytest-homeassistant-custom-component`, et `home-assistant-frontend` = version requise par ce HA.
-- **Renovate** (`renovate.json`, application GitHub) ouvre les PR de mise à jour le lundi matin, après 3 jours de
-  recul sur chaque version : un PR par groupe ci-dessus (règles regex pour le manifest et l'image Docker), un pour
-  les dépendances npm mineures, un pour les actions GitHub. Images HA stables uniquement. Valider la config :
-  `docker run --rm -v "$PWD/renovate.json:/repo/renovate.json:ro" -w /repo node:24-alpine npx --yes --package
-  renovate@latest -- renovate-config-validator --strict renovate.json` (Renovate récent exige Node 24).
+- **Renovate** (`renovate.json`, application GitHub ; tableau de bord : ticket « Dependency Dashboard ») ouvre les PR
+  le lundi matin, après 3 jours de recul sur chaque version :
+  - `recipe-scrapers` : détecté dans le manifest par le gestionnaire natif `homeassistant-manifest` de Renovate,
+    mis à jour avec `pyproject.toml` / `uv.lock` dans la même PR ;
+  - Home Assistant : **seule `pytest-homeassistant-custom-component` est mise à jour** (elle fixe la version de HA).
+    Sur sa PR, lancer `make sync-ha` (aligne l'image Docker et `home-assistant-frontend`, puis `uv lock`) et pousser :
+    `test_versions` échoue tant que ce n'est pas fait. `home-assistant-frontend` et la version de Python
+    (`.python-version`, imposée par HA) ne sont jamais mis à jour seuls ;
+  - dépendances npm mineures groupées ; actions GitHub groupées ; Node via `.nvmrc` et l'image `node`.
+  - Valider la config : `docker run --rm -v "$PWD/renovate.json:/repo/renovate.json:ro" -w /repo node:24-alpine npx
+    --yes --package renovate@latest -- renovate-config-validator --strict renovate.json` (Renovate exige Node 24).
 - **PR Renovate npm** : Renovate ne reconstruit pas le bundle ; si la sortie change, le job « bundle à jour »
   échoue → récupérer la branche, `make build`, commiter le bundle sur la branche.
-- **PR Home Assistant** : Renovate peut proposer une image HA plus récente que celle de
-  `pytest-homeassistant-custom-component` (publiée quelques jours après) → `test_versions` échoue ; attendre la
-  version correspondante de la bibliothèque de test, ou aligner l'image à la main.
+- **Accès GitHub** : `gh` est authentifié sur le poste (tickets, PR, runs CI : `gh run list`, `gh run view --log-failed`).
 - La version de l'intégration (`manifest.json`) sert aussi au cache-busting du bundle (`?v=`).
 
 ## Conventions

@@ -1,5 +1,5 @@
 # Dev shortcuts — the local Docker HA only, never production.
-.PHONY: up up-ha down logs restart-ha watch build seed typecheck test test-py test-front e2e e2e-headed lint format
+.PHONY: up up-ha down logs restart-ha watch build seed sync-ha typecheck test test-py test-front e2e e2e-headed lint format
 
 up: ## HA + frontend watch, both in Docker
 	docker compose --profile frontend up -d
@@ -20,6 +20,12 @@ seed: ## Replace the DEV recipes with dev/fixtures/recipes.json
 	docker compose stop homeassistant
 	uv run python dev/seed.py
 	docker compose start homeassistant
+
+sync-ha: ## Align HA Docker image + home-assistant-frontend on the HA of the test library
+	uv sync
+	uv run python dev/sync_ha_versions.py
+	uv lock
+	uv sync
 
 watch: ## Frontend watch on the host
 	cd frontend && npm run watch

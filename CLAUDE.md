@@ -29,7 +29,14 @@ Nicolas déclenche lui-même : ne jamais s'y connecter, y copier des fichiers ou
   - À venir : `cookbook/scrape` (`recipe-scrapers` + JSON-LD), images dans `/config/cookbook/images/` servies par une
     `HomeAssistantView` avec chemins signés.
 - **Frontend** (`frontend/`) : web component **Lit 3 + TypeScript**, bundle ES unique via **Vite**
-  → `custom_components/cookbook/frontend/cookbook-panel.js`. Utiliser les variables CSS du thème HA.
+  → `custom_components/cookbook/frontend/cookbook-panel.js`.
+  - `cookbook-panel.ts` (racine : barre d'outils, routage), `router.ts` (sous-routes `/cookbook`,
+    `/cookbook/recipe/<id>` ; navigation via `history.pushState` + événement `location-changed`, comme HA),
+    `api.ts` (client typé des commandes WS), `views/` (écrans), `components/`, `print.ts` (impression via iframe).
+  - **Composants maison uniquement**, stylés avec les variables CSS du thème HA (`styles.ts`). Ne pas utiliser les
+    composants internes de HA (`ha-textfield`, `ha-dialog`…) : instables et pas toujours chargés. Exceptions :
+    `ha-menu-button`, `ha-icon`.
+  - Préférences par appareil (coches du mode cuisine, texte agrandi) en `localStorage`, toujours dans un try/catch.
 - **Droits** : tout utilisateur peut lire / créer / modifier / importer ; **suppression réservée aux admins**
   (décorateur `@websocket_api.require_admin`). Chaque recette garde `created_by` / `updated_by` (id utilisateur HA) ;
   `get` / `create` / `update` ajoutent `created_by_name` / `updated_by_name`, résolus à la lecture.
@@ -56,7 +63,7 @@ dev/config/                   # config du HA de dev (seul configuration.yaml est
 | `make up-ha` puis `make watch` | HA dans Docker, watch du frontend sur le Mac (plus rapide) |
 | `make restart-ha` | Obligatoire après toute modification Python |
 | `make logs` / `make down` | Logs / arrêt |
-| `make test` | `uv run pytest` |
+| `make test` | Tous les tests (`make test-py` : pytest, `make test-front` : Vitest + happy-dom) |
 | `make lint` / `make format` | ruff |
 | `make typecheck` | `tsc --noEmit` sur le frontend |
 | `make build` | Bundle de production : **à lancer avant chaque commit touchant `frontend/`** (la CI vérifie que le bundle commité est à jour ; le watch produit un bundle de dev non minifié) |
@@ -74,4 +81,4 @@ La version de l'intégration (`manifest.json`) sert aussi au cache-busting du bu
 
 - Code, commentaires, commits, `README.md` : **anglais**. `CLAUDE.md`, `README.fr.md`, échanges : français.
 - Clés de `manifest.json` : `domain`, `name`, puis ordre alphabétique (exigé par hassfest).
-- Toute nouvelle fonctionnalité backend s'accompagne de tests pytest.
+- Toute nouvelle fonctionnalité s'accompagne de tests : pytest pour le backend, Vitest (`frontend/test/`) pour le frontend.

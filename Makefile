@@ -1,5 +1,5 @@
 # Dev shortcuts — the local Docker HA only, never production.
-.PHONY: up up-ha down logs restart-ha watch build typecheck test lint format
+.PHONY: up up-ha down logs restart-ha watch build typecheck test test-py test-front lint format
 
 up: ## HA + frontend watch, both in Docker
 	docker compose --profile frontend up -d
@@ -25,8 +25,13 @@ build: ## Production bundle (commit it)
 typecheck:
 	cd frontend && npm run typecheck
 
-test:
+test: test-py test-front ## All tests
+
+test-py:
 	uv run pytest
+
+test-front:
+	cd frontend && npm test
 
 lint:
 	uv run ruff check .

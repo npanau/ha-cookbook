@@ -4,7 +4,7 @@ import "../components/confirm-dialog";
 import { formatDate, formatDuration, groupBySection, totalTime } from "../format";
 import { type Localize, getLanguage, getLocalize } from "../i18n";
 import { printRecipe } from "../print";
-import { listUrl, navigate } from "../router";
+import { editUrl, listUrl, navigate } from "../router";
 import { sharedStyles } from "../styles";
 import type { HomeAssistant, Recipe, RecipeItem } from "../types";
 
@@ -189,6 +189,9 @@ export class CookbookRecipeView extends LitElement {
             </button>`
           : nothing}
         <span class="spacer"></span>
+        <button class="btn primary edit" @click=${() => navigate(editUrl(recipe.id))}>
+          <ha-icon icon="mdi:pencil"></ha-icon>${t("edit")}
+        </button>
         <button class="btn print" @click=${() => printRecipe(recipe, t, language)}>
           <ha-icon icon="mdi:printer"></ha-icon>${t("print")}
         </button>

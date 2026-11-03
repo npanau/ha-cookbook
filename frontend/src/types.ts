@@ -26,6 +26,8 @@ export interface RecipeSummary {
   total_time: number | null;
   image: string | null;
   updated_at: string;
+  /** Search results only: ingredient lines containing a searched word. */
+  matched_ingredients?: string[];
 }
 
 export interface Recipe extends RecipeSummary {
@@ -45,4 +47,19 @@ export interface Recipe extends RecipeSummary {
 export interface Category {
   name: string;
   count: number;
+}
+
+/** Fields a client may send to cookbook/create and cookbook/update. */
+export interface RecipeFields {
+  name: string;
+  description: string | null;
+  categories: string[];
+  prep_time: number | null;
+  cook_time: number | null;
+  total_time: number | null;
+  servings: string | null;
+  ingredients: RecipeItem[];
+  steps: RecipeItem[];
+  notes: string | null;
+  source_url: string | null;
 }

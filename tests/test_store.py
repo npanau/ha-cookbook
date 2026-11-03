@@ -53,6 +53,16 @@ def test_schema_normalizes_fields() -> None:
     }
 
 
+async def test_matched_ingredients_are_limited(
+    hass: HomeAssistant, hass_storage
+) -> None:
+    store = await _store(hass)
+    ingredients = [{"text": f"{n} g de sucre", "section": None} for n in range(1, 9)]
+    await store.async_create({"name": "Sucré", "ingredients": ingredients}, None)
+    matched = store.search("sucre")[0]["matched_ingredients"]
+    assert matched == [f"{n} g de sucre" for n in range(1, 6)]
+
+
 @pytest.mark.parametrize(
     "fields",
     [
@@ -187,4 +197,11 @@ async def test_list_categories_and_search(hass: HomeAssistant, hass_storage) -> 
     assert [r["id"] for r in store.search("oeufs omelette")] == [omelette["id"]]
     assert [r["id"] for r in store.search("œufs", category="dessert")] == [brulee["id"]]
     assert store.search("introuvable") == []
+
+    # Search results tell which ingredient lines matched (list results do not).
+    by_id = {r["id"]: r for r in store.search("oeuf")}
+    assert by_id[brulee["id"]]["matched_ingredients"] == ["4 œufs"]
+    assert by_id[omelette["id"]]["matched_ingredients"] == ["3 œufs"]
+    assert store.search("tarte")[0]["matched_ingredients"] == []
+    assert "matched_ingredients" not in store.list()[0]
     assert len(store.search("  ")) == 3

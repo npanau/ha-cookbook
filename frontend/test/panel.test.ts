@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import "../src/cookbook-panel";
 import { $, mockHass, mount } from "./helpers";
 
@@ -33,6 +33,21 @@ describe("panel", () => {
   it("shows the sidebar menu button on narrow screens", async () => {
     expect($(await panel("", true), "ha-menu-button")).not.toBeNull();
     expect($(await panel(""), "ha-menu-button")).toBeNull();
+  });
+
+  it("shows the editor for new and edit routes", async () => {
+    expect($(await panel("/new"), "cookbook-recipe-editor")).not.toBeNull();
+    const el = await panel("/edit/r1");
+    const editor = $(el, "cookbook-recipe-editor") as HTMLElement & { recipeId: string };
+    expect(editor.recipeId).toBe("r1");
+  });
+
+  it("lets the editor guard the back arrow", async () => {
+    const el = await panel("/edit/r1");
+    const editor = $(el, "cookbook-recipe-editor") as HTMLElement & { requestLeave(url: string): void };
+    const spy = vi.spyOn(editor, "requestLeave").mockImplementation(() => undefined);
+    $<HTMLButtonElement>(el, ".back")!.click();
+    expect(spy).toHaveBeenCalledWith("/cookbook/recipe/r1");
   });
 
   it("handles unknown routes", async () => {

@@ -2,8 +2,9 @@ import { LitElement, css, html, nothing } from "lit";
 import { CookbookApi, isApiError } from "../api";
 import { formatDuration, totalTime } from "../format";
 import { getLocalize } from "../i18n";
-import { navigate, recipeUrl, rememberListSearch } from "../router";
+import { NEW_URL, navigate, recipeUrl, rememberListSearch } from "../router";
 import { sharedStyles } from "../styles";
+import { highlight } from "../text";
 import type { Category, HomeAssistant, RecipeSummary } from "../types";
 
 export const SEARCH_DEBOUNCE_MS = 250;
@@ -27,6 +28,8 @@ export class CookbookRecipeList extends LitElement {
   category: string | null = null;
   loading = true;
   error: string | null = null;
+  /** Query of the displayed results (the field may already hold a newer one). */
+  private resultsQuery = "";
 
   private debounce?: ReturnType<typeof setTimeout>;
   private requestId = 0;
@@ -68,6 +71,7 @@ export class CookbookRecipeList extends LitElement {
         ? await this.api.search(query, category)
         : await this.api.list(category);
       if (id !== this.requestId) return;
+      this.resultsQuery = query;
       this.recipes = recipes;
       this.error = null;
     } catch (error) {
@@ -123,6 +127,7 @@ export class CookbookRecipeList extends LitElement {
   protected render() {
     const t = getLocalize(this.hass);
     return html`
+      <div class="top">
       <div class="search">
         <ha-icon icon="mdi:magnify"></ha-icon>
         <input
@@ -137,6 +142,10 @@ export class CookbookRecipeList extends LitElement {
               <ha-icon icon="mdi:close"></ha-icon>
             </button>`
           : nothing}
+      </div>
+      <button class="btn primary new" @click=${() => navigate(NEW_URL)}>
+        <ha-icon icon="mdi:plus"></ha-icon><span class="new-label">${t("new_recipe")}</span>
+      </button>
       </div>
       ${this.categories.length
         ? html`<div class="filters" role="group">
@@ -175,6 +184,9 @@ export class CookbookRecipeList extends LitElement {
             <ha-icon class="big" icon="mdi:chef-hat"></ha-icon>
             <h2>${t("no_recipes")}</h2>
             <p>${t("no_recipes_hint")}</p>
+            <button class="btn primary" @click=${() => navigate(NEW_URL)}>
+              <ha-icon icon="mdi:plus"></ha-icon>${t("new_recipe")}
+            </button>
           </div>`;
     }
     return html`<div class="grid">
@@ -193,6 +205,17 @@ export class CookbookRecipeList extends LitElement {
                   <ha-icon icon="mdi:clock-outline"></ha-icon>${formatDuration(total, t)}
                 </div>`
               : nothing}
+            ${recipe.matched_ingredients?.length
+              ? html`<ul class="matches">
+                  ${recipe.matched_ingredients.map(
+                    (line) => html`<li>
+                      ${highlight(line, this.resultsQuery).map((part) =>
+                        part.match ? html`<mark>${part.text}</mark>` : part.text,
+                      )}
+                    </li>`,
+                  )}
+                </ul>`
+              : nothing}
             <div class="chips">${recipe.categories.map((c) => html`<span class="chip">${c}</span>`)}</div>
           </div>
         </a>`;
@@ -210,7 +233,23 @@ export class CookbookRecipeList extends LitElement {
         margin: 0 auto;
         box-sizing: border-box;
       }
+      .top {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .top .new {
+        flex: none;
+        min-height: 44px;
+        border-radius: 22px;
+      }
+      @media (max-width: 500px) {
+        .new-label {
+          display: none;
+        }
+      }
       .search {
+        flex: 1;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -296,6 +335,24 @@ export class CookbookRecipeList extends LitElement {
         flex-wrap: wrap;
         gap: 4px;
         margin-top: 8px;
+      }
+      .matches {
+        margin: 8px 0 0;
+        padding: 0 0 0 18px;
+        font-size: 13px;
+        color: var(--secondary-text-color);
+      }
+      .matches li {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      mark {
+        padding: 0 1px;
+        border-radius: 3px;
+        background: rgba(var(--rgb-primary-color, 3, 169, 244), 0.2);
+        color: var(--primary-text-color);
+        font-weight: 500;
       }
       .big {
         --mdc-icon-size: 64px;

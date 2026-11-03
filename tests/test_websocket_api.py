@@ -100,6 +100,7 @@ async def test_crud_by_non_admin_user(
 
     found = await _ok(user_ws, "search", query="creme brulee")
     assert [r["id"] for r in found["recipes"]] == [recipe["id"]]
+    assert found["recipes"][0]["matched_ingredients"] == ["50 cl de crème"]
 
     categories = await _ok(user_ws, "categories")
     assert categories == {"categories": [{"name": "Dessert", "count": 1}]}

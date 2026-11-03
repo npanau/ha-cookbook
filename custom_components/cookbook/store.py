@@ -29,6 +29,8 @@ SUMMARY_FIELDS = (
     "updated_at",
 )
 
+MAX_MATCHED_INGREDIENTS = 5
+
 # Search weights: a match in the name matters more than in the steps.
 SEARCH_WEIGHTS = (
     ("name", 10),
@@ -72,6 +74,15 @@ def _field_text(recipe: dict[str, Any], field: str) -> str:
     if field in ("ingredients", "steps"):
         return " ".join(f"{item.get('section') or ''} {item['text']}" for item in value)
     return value
+
+
+def _matched_ingredients(recipe: dict[str, Any], tokens: list[str]) -> list[str]:
+    """Ingredient lines containing a searched word, to show why a recipe matched."""
+    return [
+        item["text"]
+        for item in recipe["ingredients"]
+        if any(token in fold(item["text"]) for token in tokens)
+    ][:MAX_MATCHED_INGREDIENTS]
 
 
 def _sort_key(recipe: dict[str, Any]) -> str:
@@ -148,7 +159,13 @@ class CookbookStore:
             else:
                 scored.append((score, recipe))
         scored.sort(key=lambda item: (-item[0], _sort_key(item[1])))
-        return [_summary(recipe) for _, recipe in scored]
+        return [
+            {
+                **_summary(recipe),
+                "matched_ingredients": _matched_ingredients(recipe, tokens),
+            }
+            for _, recipe in scored
+        ]
 
     async def async_create(
         self, fields: dict[str, Any], user_id: str | None

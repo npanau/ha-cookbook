@@ -1,8 +1,10 @@
 import { LitElement, css, html, nothing } from "lit";
 import { getLocalize } from "./i18n";
-import { PANEL_PREFIX, listUrl, navigate, parsePath } from "./router";
+import { PANEL_PREFIX, type View, listUrl, navigate, parsePath, recipeUrl } from "./router";
 import { sharedStyles } from "./styles";
 import type { HomeAssistant, PanelRoute } from "./types";
+import type { CookbookRecipeEditor } from "./views/recipe-editor";
+import "./views/recipe-editor";
 import "./views/recipe-list";
 import "./views/recipe-view";
 
@@ -18,6 +20,14 @@ class CookbookPanel extends LitElement {
   narrow = false;
   route?: PanelRoute;
 
+  /** Back arrow: editor -> recipe (or list for a new one), recipe -> list. */
+  private back(view: View) {
+    const target = view.name === "edit" ? recipeUrl(view.id) : listUrl();
+    const editor = this.renderRoot.querySelector<CookbookRecipeEditor>("cookbook-recipe-editor");
+    if (editor) editor.requestLeave(target);
+    else navigate(target);
+  }
+
   protected render() {
     if (!this.hass) return nothing;
     const t = getLocalize(this.hass);
@@ -28,7 +38,7 @@ class CookbookPanel extends LitElement {
           ? html`<ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>`
           : nothing}
         ${view.name !== "list"
-          ? html`<button class="icon-btn back" aria-label=${t("back")} @click=${() => navigate(listUrl())}>
+          ? html`<button class="icon-btn back" aria-label=${t("back")} @click=${() => this.back(view)}>
               <ha-icon icon="mdi:arrow-left"></ha-icon>
             </button>`
           : nothing}
@@ -39,7 +49,11 @@ class CookbookPanel extends LitElement {
           ? html`<cookbook-recipe-list .hass=${this.hass}></cookbook-recipe-list>`
           : view.name === "recipe"
             ? html`<cookbook-recipe-view .hass=${this.hass} .recipeId=${view.id}></cookbook-recipe-view>`
-            : html`<div class="message">
+            : view.name === "new"
+              ? html`<cookbook-recipe-editor .hass=${this.hass}></cookbook-recipe-editor>`
+              : view.name === "edit"
+                ? html`<cookbook-recipe-editor .hass=${this.hass} .recipeId=${view.id}></cookbook-recipe-editor>`
+                : html`<div class="message">
                 <p>${t("page_not_found")}</p>
                 <button class="btn" @click=${() => navigate(PANEL_PREFIX)}>${t("back_to_list")}</button>
               </div>`}

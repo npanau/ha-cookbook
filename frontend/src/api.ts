@@ -1,4 +1,4 @@
-import type { Category, HomeAssistant, Recipe, RecipeSummary } from "./types";
+import type { Category, HomeAssistant, Recipe, RecipeFields, RecipeSummary } from "./types";
 
 /** Error returned by a `cookbook/*` WebSocket command. */
 export interface ApiError {
@@ -40,6 +40,20 @@ export class CookbookApi {
 
   get(recipeId: string): Promise<Recipe> {
     return this.hass.callWS<Recipe>({ type: "cookbook/get", recipe_id: recipeId });
+  }
+
+  create(fields: RecipeFields): Promise<Recipe> {
+    return this.hass.callWS<Recipe>({ type: "cookbook/create", ...fields });
+  }
+
+  /** Partial update; with `expectedUpdatedAt`, fails with "conflict" if the recipe changed. */
+  update(recipeId: string, fields: Partial<RecipeFields>, expectedUpdatedAt?: string): Promise<Recipe> {
+    return this.hass.callWS<Recipe>({
+      type: "cookbook/update",
+      recipe_id: recipeId,
+      ...(expectedUpdatedAt ? { expected_updated_at: expectedUpdatedAt } : {}),
+      ...fields,
+    });
   }
 
   async delete(recipeId: string): Promise<void> {

@@ -70,6 +70,29 @@ describe("recipe list", () => {
     expect(location.search).toBe("?q=creme");
   });
 
+  it("shows the matching ingredients of search results", async () => {
+    vi.useFakeTimers();
+    const { hass } = mockHass({
+      "cookbook/list": () => ({ recipes: RECIPES }),
+      "cookbook/categories": () => ({ categories: [] }),
+      "cookbook/search": () => ({
+        recipes: [
+          { ...RECIPES[0], matched_ingredients: ["6 jaunes d'œufs"] },
+          { ...RECIPES[1], matched_ingredients: [] },
+        ],
+      }),
+    });
+    const el = await mount<CookbookRecipeList>("cookbook-recipe-list", { hass });
+    await type(el, "oeufs");
+    await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+    await settle(el);
+
+    const cards = $$(el, ".recipe");
+    expect(cards[0].querySelector(".matches li")!.textContent!.trim()).toBe("6 jaunes d'œufs");
+    expect(cards[0].querySelector("mark")!.textContent).toBe("œufs");
+    expect(cards[1].querySelector(".matches")).toBeNull();
+  });
+
   it("filters by category and toggles it off", async () => {
     const { hass, callWS } = setup();
     const el = await mount<CookbookRecipeList>("cookbook-recipe-list", { hass });
@@ -131,6 +154,13 @@ describe("recipe list", () => {
       }).hass,
     });
     expect($(filtered, ".message")!.textContent).toContain("Aucune recette ne correspond");
+  });
+
+  it("opens the editor for a new recipe", async () => {
+    const { hass } = setup();
+    const el = await mount<CookbookRecipeList>("cookbook-recipe-list", { hass });
+    $<HTMLButtonElement>(el, ".new")!.click();
+    expect(location.pathname).toBe("/cookbook/new");
   });
 
   it("shows API errors", async () => {

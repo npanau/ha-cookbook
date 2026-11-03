@@ -73,6 +73,12 @@ describe("recipe view", () => {
     expect(location.pathname + location.search).toBe("/cookbook?q=creme");
   });
 
+  it("opens the editor", async () => {
+    const el = await view(setup().hass);
+    $<HTMLButtonElement>(el, ".edit")!.click();
+    expect(location.pathname).toBe("/cookbook/edit/r1");
+  });
+
   it("shows a not-found message", async () => {
     const { hass } = mockHass({ "cookbook/get": () => apiError("not_found") });
     const el = await view(hass);

@@ -9,11 +9,12 @@ on:
 
 jobs:
   hacs:
+    # The HACS action only validates public repositories: skipped while the repo is private.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
       - uses: hacs/action@main
         with:
           category: integration
           # brands: no logo in home-assistant/brands yet.
-          # description/topics: set them on GitHub before going public, then remove from this list.
-          ignore: brands description topics
+          ignore: brands

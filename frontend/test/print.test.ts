@@ -25,6 +25,13 @@ describe("print", () => {
     expect(buildPrintHtml(recipe, t, "fr")).toContain("<li>200 g de farine</li>");
   });
 
+  it("prints a small photo on top", () => {
+    const html = buildPrintHtml(makeRecipe({ image_url: "/api/cookbook/images/i/large.webp?authSig=a&b" }), t, "fr");
+    expect(html).toContain('<img class="photo" src="/api/cookbook/images/i/large.webp?authSig=a&#38;b" alt="">');
+    expect(html).toContain("max-height: 6cm");
+    expect(buildPrintHtml(makeRecipe(), t, "fr")).not.toContain('class="photo"');
+  });
+
   it("escapes user content", () => {
     const html = buildPrintHtml(makeRecipe({ name: '<script>alert("x")</script>' }), t, "fr");
     expect(html).not.toContain("<script>");

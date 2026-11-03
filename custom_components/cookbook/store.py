@@ -13,6 +13,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
+from .images import ImageFiles
 from .models import DEFAULT_RECIPE, fold
 
 STORAGE_KEY = DOMAIN
@@ -114,6 +115,7 @@ class CookbookStore:
             hass, STORAGE_VERSION, STORAGE_KEY, minor_version=STORAGE_MINOR_VERSION
         )
         self._recipes: dict[str, dict[str, Any]] = {}
+        self.images = ImageFiles(hass)
 
     async def async_load(self) -> None:
         data = await self._store.async_load() or {}
@@ -123,9 +125,10 @@ class CookbookStore:
         await self._store.async_save({"recipes": self._recipes})
 
     async def async_remove_all(self) -> None:
-        """Delete the storage file (used when the user asked for it on removal)."""
+        """Delete the storage file and the photos (when asked for on removal)."""
         self._recipes = {}
         await self._store.async_remove()
+        await self.images.async_remove_all()
 
     def _matches_category(self, recipe: dict[str, Any], category: str | None) -> bool:
         return category is None or fold(category) in {
@@ -249,6 +252,28 @@ class CookbookStore:
         return copy.deepcopy(recipe)
 
     async def async_delete(self, recipe_id: str) -> None:
-        if self._recipes.pop(recipe_id, None) is None:
+        recipe = self._recipes.pop(recipe_id, None)
+        if recipe is None:
             raise RecipeNotFoundError(recipe_id)
         await self._async_save()
+        await self.images.async_delete(recipe.get("image"))
+
+    async def async_set_image(
+        self, recipe_id: str, data: bytes | None, user_id: str | None
+    ) -> dict[str, Any]:
+        """Replace (data) or remove (None) the photo of a recipe; deletes old files."""
+        if recipe_id not in self._recipes:
+            raise RecipeNotFoundError(recipe_id)
+        new_image = await self.images.async_save(data) if data is not None else None
+        # The recipe may have been deleted while the photo was being processed.
+        recipe = self._recipes.get(recipe_id)
+        if recipe is None:
+            await self.images.async_delete(new_image)
+            raise RecipeNotFoundError(recipe_id)
+        old_image = recipe.get("image")
+        recipe["image"] = new_image
+        recipe["updated_at"] = dt_util.utcnow().isoformat()
+        recipe["updated_by"] = user_id
+        await self._async_save()
+        await self.images.async_delete(old_image)
+        return copy.deepcopy(recipe)

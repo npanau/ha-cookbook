@@ -200,7 +200,11 @@ export class CookbookRecipeList extends LitElement {
           href=${recipeUrl(recipe.id)}
           @click=${(e: MouseEvent) => this.open(e, recipe.id)}
         >
-          <div class="picture"><ha-icon icon="mdi:silverware-fork-knife"></ha-icon></div>
+          <div class="picture">
+            ${recipe.thumbnail_url
+              ? html`<img src=${recipe.thumbnail_url} alt="" loading="lazy" />`
+              : html`<ha-icon icon="mdi:silverware-fork-knife"></ha-icon>`}
+          </div>
           <div class="body">
             <h3>${recipe.name}</h3>
             ${total != null
@@ -316,7 +320,13 @@ export class CookbookRecipeList extends LitElement {
       .recipe:hover {
         border-color: var(--primary-color);
       }
+      .picture img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
       .picture {
+        overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;

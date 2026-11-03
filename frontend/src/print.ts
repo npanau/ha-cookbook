@@ -56,9 +56,11 @@ export function buildPrintHtml(recipe: Recipe, t: Localize, language: string, se
   section, li { break-inside: avoid; }
   h2, h3 { break-after: avoid; }
   .source { font-size: 9pt; color: #555; word-break: break-all; }
+  .photo { display: block; max-height: 6cm; max-width: 100%; margin: 0 0 10pt; border-radius: 4pt; object-fit: cover; }
 </style>
 </head>
 <body>
+${recipe.image_url ? `<img class="photo" src="${escape(recipe.image_url)}" alt="">` : ""}
 <h1>${escape(recipe.name)}</h1>
 ${recipe.categories.length ? `<div class="categories">${escape(recipe.categories.join(" · "))}</div>` : ""}
 ${metaHtml ? `<div class="meta">${metaHtml}</div>` : ""}

@@ -73,6 +73,18 @@ describe("recipe view", () => {
     expect(location.pathname + location.search).toBe("/cookbook?q=creme");
   });
 
+  it("shows the photo on top", async () => {
+    const { hass } = mockHass({
+      "cookbook/get": () => makeRecipe({ image: "img", image_url: "/api/cookbook/images/img/large.webp?authSig=l" }),
+    });
+    const el = await view(hass);
+    const hero = $<HTMLImageElement>(el, ".hero")!;
+    expect(hero.getAttribute("src")).toContain("large.webp?authSig=l");
+    expect(hero.alt).toBe("Crème brûlée");
+    document.body.innerHTML = "";
+    expect($(await view(setup().hass), ".hero")).toBeNull();
+  });
+
   it("opens the editor", async () => {
     const el = await view(setup().hass);
     $<HTMLButtonElement>(el, ".edit")!.click();

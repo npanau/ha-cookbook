@@ -11,8 +11,9 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 
 from .const import DOMAIN
+from .images import ImageError, recipe_with_urls
 from .models import FIELD_VALIDATORS
-from .scraper import ScrapeError, async_scrape
+from .scraper import ScrapeError, async_scrape, fetch_image
 from .store import (
     CookbookStore,
     DuplicateSourceError,
@@ -44,6 +45,7 @@ def async_register_commands(hass: HomeAssistant) -> None:
         ws_search,
         ws_categories,
         ws_scrape,
+        ws_import_image,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -67,7 +69,7 @@ def _with_store(func: _Handler) -> websocket_api.AsyncWebSocketCommandHandler:
             connection.send_error(
                 msg["id"], websocket_api.ERR_NOT_FOUND, "Recipe not found"
             )
-        except ScrapeError as err:
+        except (ScrapeError, ImageError) as err:
             connection.send_error(msg["id"], err.code, str(err))
         except DuplicateSourceError as err:
             # The existing recipe travels in the placeholders, for a link in the UI.
@@ -102,8 +104,9 @@ async def _user_name(hass: HomeAssistant, user_id: str | None) -> str | None:
 
 
 async def _with_names(hass: HomeAssistant, recipe: dict[str, Any]) -> dict[str, Any]:
+    """Full recipe for the frontend: author names and signed photo URLs."""
     return {
-        **recipe,
+        **recipe_with_urls(hass, recipe),
         "created_by_name": await _user_name(hass, recipe["created_by"]),
         "updated_by_name": await _user_name(hass, recipe["updated_by"]),
     }
@@ -115,7 +118,8 @@ async def _with_names(hass: HomeAssistant, recipe: dict[str, Any]) -> dict[str, 
 @websocket_api.async_response
 @_with_store
 async def ws_list(hass, connection, msg, store: CookbookStore) -> None:
-    connection.send_result(msg["id"], {"recipes": store.list(msg.get("category"))})
+    recipes = [recipe_with_urls(hass, r) for r in store.list(msg.get("category"))]
+    connection.send_result(msg["id"], {"recipes": recipes})
 
 
 @websocket_api.websocket_command(
@@ -184,7 +188,9 @@ async def ws_delete(hass, connection, msg, store: CookbookStore) -> None:
 @_with_store
 async def ws_search(hass, connection, msg, store: CookbookStore) -> None:
     recipes = store.search(msg["query"], msg.get("category"))
-    connection.send_result(msg["id"], {"recipes": recipes})
+    connection.send_result(
+        msg["id"], {"recipes": [recipe_with_urls(hass, r) for r in recipes]}
+    )
 
 
 @websocket_api.websocket_command({vol.Required("type"): "cookbook/categories"})
@@ -203,7 +209,26 @@ async def ws_categories(hass, connection, msg, store: CookbookStore) -> None:
 @websocket_api.async_response
 @_with_store
 async def ws_scrape(hass, connection, msg, store: CookbookStore) -> None:
-    """Preview of the recipe at `url` (nothing saved), plus an existing duplicate."""
-    fields = await async_scrape(hass, msg["url"])
+    """Preview of the recipe at `url` (nothing saved), its photo URL, a duplicate."""
+    fields, image_url = await async_scrape(hass, msg["url"])
     duplicate = store.find_by_source_url(msg["url"], fields["source_url"])
-    connection.send_result(msg["id"], {"recipe": fields, "duplicate": duplicate})
+    connection.send_result(
+        msg["id"], {"recipe": fields, "image_url": image_url, "duplicate": duplicate}
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "cookbook/import_image",
+        vol.Required("recipe_id"): RECIPE_ID,
+        vol.Required("url"): vol.All(str, vol.Length(min=1, max=2000)),
+    }
+)
+@websocket_api.async_response
+@_with_store
+async def ws_import_image(hass, connection, msg, store: CookbookStore) -> None:
+    """Download the photo of an imported recipe (same protections as the page)."""
+    store.get(msg["recipe_id"])  # not_found before downloading anything
+    data = await fetch_image(hass, msg["url"])
+    recipe = await store.async_set_image(msg["recipe_id"], data, connection.user.id)
+    connection.send_result(msg["id"], await _with_names(hass, recipe))

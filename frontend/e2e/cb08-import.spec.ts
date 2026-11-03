@@ -31,6 +31,10 @@ test("CB08 : importer une recette depuis une URL", async ({ cookbook, uid }) => 
   await expect(sheet.locator(".count")).toHaveText("6 personnes");
   await expect(sheet.locator(".ingredients .item-text")).toContainText(["100 g de poudre d'amandes"]);
   await expect(sheet.getByRole("link", { name: "Voir la recette d'origine" })).toHaveAttribute("href", url);
+  // The photo of the page was downloaded by HA and is served from HA.
+  const hero = sheet.locator("img.hero");
+  await expect(hero).toHaveAttribute("src", /\/api\/cookbook\/images\/\w+\/large\.webp\?authSig=/);
+  await expect.poll(() => hero.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 
   // The same address again: no second copy, the existing recipe is pointed out.
   await cookbook.goto(`/import?url=${encodeURIComponent(url)}`);

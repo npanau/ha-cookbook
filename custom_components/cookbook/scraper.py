@@ -96,6 +96,41 @@ async def _ensure_public_host(hass: HomeAssistant, url: str) -> None:
 
 async def fetch_page(hass: HomeAssistant, url: str) -> tuple[str, str]:
     """Download an HTML page (redirects followed by hand, each hop checked)."""
+    final_url, body, charset = await _download(
+        hass,
+        url,
+        HTML_TYPES,
+        MAX_BYTES,
+        "not_a_recipe",
+        "This address is not a web page",
+    )
+    return final_url, body.decode(charset or "utf-8", errors="replace")
+
+
+async def fetch_image(hass: HomeAssistant, url: str) -> bytes:
+    """Download a photo of an imported recipe, with the same protections as pages."""
+    from .images import IMAGE_CONTENT_TYPES, MAX_UPLOAD_BYTES  # noqa: PLC0415
+
+    _, body, _ = await _download(
+        hass,
+        url,
+        IMAGE_CONTENT_TYPES,
+        MAX_UPLOAD_BYTES,
+        "invalid_image",
+        "This address is not a photo",
+    )
+    return bytes(body)
+
+
+async def _download(
+    hass: HomeAssistant,
+    url: str,
+    content_types: tuple[str, ...],
+    max_bytes: int,
+    wrong_type_code: str,
+    wrong_type_message: str,
+) -> tuple[str, bytearray, str | None]:
+    """GET with manual redirects (each hop checked), type and size limits."""
     session = async_get_clientsession(hass)
     current = validate_url(url)
     for _ in range(MAX_REDIRECTS + 1):
@@ -114,15 +149,14 @@ async def fetch_page(hass: HomeAssistant, url: str) -> tuple[str, str]:
                     raise ScrapeError(
                         "fetch_failed", f"The site answered HTTP {response.status}"
                     )
-                if response.content_type not in HTML_TYPES:
-                    raise ScrapeError("not_a_recipe", "This address is not a web page")
+                if response.content_type not in content_types:
+                    raise ScrapeError(wrong_type_code, wrong_type_message)
                 body = bytearray()
                 async for chunk in response.content.iter_chunked(64 * 1024):
                     body += chunk
-                    if len(body) > MAX_BYTES:
-                        raise ScrapeError("too_large", "The page is too large")
-                encoding = response.charset or "utf-8"
-                return current, body.decode(encoding, errors="replace")
+                    if len(body) > max_bytes:
+                        raise ScrapeError("too_large", "The file is too large")
+                return current, body, response.charset
         except TimeoutError as err:
             raise ScrapeError(
                 "fetch_failed", "The site did not answer in time"
@@ -233,7 +267,16 @@ def map_scraper(scraper: Any, url: str) -> dict[str, Any]:
     return {key: FIELD_VALIDATORS[key](value) for key, value in fields.items()}
 
 
-def _parse(page: str, url: str) -> dict[str, Any]:
+def _image_url(scraper: Any, page_url: str) -> str | None:
+    """Absolute http(s) URL of the recipe photo, if the page has one."""
+    image = _safe(scraper, "image")
+    if not isinstance(image, str) or not image.strip():
+        return None
+    url = urljoin(page_url, image.strip())
+    return url if url.startswith(("http://", "https://")) else None
+
+
+def _parse(page: str, url: str) -> tuple[dict[str, Any], str | None]:
     # Imported here, in the executor: recipe-scrapers pulls lxml & co (slow import).
     from recipe_scrapers import scrape_html  # noqa: PLC0415
 
@@ -242,10 +285,12 @@ def _parse(page: str, url: str) -> dict[str, Any]:
     except Exception as err:  # noqa: BLE001 - any failure means "not a recipe page"
         _LOGGER.debug("recipe-scrapers could not parse %s: %s", url, err)
         raise ScrapeError("not_a_recipe", "No recipe found on this page") from err
-    return map_scraper(scraper, url)
+    return map_scraper(scraper, url), _image_url(scraper, url)
 
 
-async def async_scrape(hass: HomeAssistant, url: str) -> dict[str, Any]:
-    """Fetch and parse a recipe page; returns editable fields (nothing saved)."""
+async def async_scrape(
+    hass: HomeAssistant, url: str
+) -> tuple[dict[str, Any], str | None]:
+    """Fetch and parse a recipe page: (editable fields, photo URL); nothing saved."""
     final_url, page = await fetch_page(hass, url)
     return await hass.async_add_executor_job(_parse, page, final_url)

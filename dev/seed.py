@@ -7,6 +7,7 @@ Only ever writes dev/config/.storage/cookbook: never point it at a real instance
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -27,6 +28,7 @@ from custom_components.cookbook.store import (  # noqa: E402
 
 FIXTURES = ROOT / "dev" / "fixtures" / "recipes.json"
 TARGET = ROOT / "dev" / "config" / ".storage" / STORAGE_KEY
+PHOTOS = ROOT / "dev" / "config" / "cookbook" / "images"
 
 
 def build_storage(fixtures: list[dict]) -> dict:
@@ -57,6 +59,8 @@ def build_storage(fixtures: list[dict]) -> dict:
 def main() -> None:
     storage = build_storage(json.loads(FIXTURES.read_text(encoding="utf-8")))
     TARGET.parent.mkdir(parents=True, exist_ok=True)
+    # The demo recipes have no photo: drop those of the replaced recipes.
+    shutil.rmtree(PHOTOS, ignore_errors=True)
     TARGET.write_text(
         json.dumps(storage, ensure_ascii=False, indent=2), encoding="utf-8"
     )

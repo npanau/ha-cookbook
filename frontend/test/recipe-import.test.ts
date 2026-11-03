@@ -69,6 +69,15 @@ describe("recipe import", () => {
     expect(editor.dirty).toBe(true);
   });
 
+  it("passes the photo of the page to the preview", async () => {
+    const { hass } = setup(() => ({ recipe: SCRAPED, image_url: "https://www.marmiton.org/p.jpg", duplicate: null }));
+    const el = await mount<CookbookRecipeImport>("cookbook-recipe-import", { hass });
+    await analyze(el, "https://www.marmiton.org/x");
+    const editor = editorOf(el)!;
+    await settle(editor);
+    expect(($(editor, "cookbook-photo-input") as unknown as { src: string }).src).toBe("https://www.marmiton.org/p.jpg");
+  });
+
   it("saves the preview as a new recipe", async () => {
     const { hass, callWS } = setup();
     const el = await mount<CookbookRecipeImport>("cookbook-recipe-import", { hass });

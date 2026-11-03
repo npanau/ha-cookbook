@@ -90,5 +90,13 @@
   "import_error_too_large": "Cette page est trop lourde pour être importée.",
   "import_another": "Importer une autre adresse",
   "duplicate_source_text": "Une autre recette a déjà cette URL source : « {name} ».",
-  "duplicate_source_field": "Déjà utilisée par une autre recette."
+  "duplicate_source_field": "Déjà utilisée par une autre recette.",
+  "photo": "Photo",
+  "add_photo": "Ajouter une photo",
+  "replace_photo": "Remplacer",
+  "remove_photo": "Retirer",
+  "photo_drop_hint": "ou déposez une image ici",
+  "photo_invalid": "Formats acceptés : JPEG, PNG, WebP.",
+  "photo_too_large": "La photo dépasse 15 Mo.",
+  "photo_failed": "La recette est enregistrée, mais la photo n'a pas pu être ajoutée ({message}). Enregistrez à nouveau pour réessayer."
 }

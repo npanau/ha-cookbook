@@ -321,6 +321,136 @@ describe("recipe editor", () => {
     );
   });
 
+  describe("photo", () => {
+    const photoFile = () => new File([new Uint8Array(10)], "p.jpg", { type: "image/jpeg" });
+    const choosePhoto = (el: Element, file: File | null) =>
+      $(el, "cookbook-photo-input")!.dispatchEvent(new CustomEvent("photo-changed", { detail: { file } }));
+    const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+
+    beforeEach(() => {
+      URL.createObjectURL = vi.fn(() => "blob:preview");
+      URL.revokeObjectURL = vi.fn();
+    });
+
+    it("saves the recipe, then uploads the chosen photo", async () => {
+      const { hass, callWS, fetchWithAuth } = mockHass(
+        { "cookbook/categories": categories, "cookbook/create": () => makeRecipe({ id: "p1" }) },
+        { fetch: () => ok(makeRecipe({ id: "p1", image: "img" })) },
+      );
+      const el = await mount<CookbookRecipeEditor>("cookbook-recipe-editor", { hass });
+      type(el, "name", "Avec photo");
+      choosePhoto(el, photoFile());
+      await settle(el);
+      expect($<HTMLImageElement>(el, "cookbook-photo-input")!.getAttribute("src") ?? "").toBe("");
+      expect(($(el, "cookbook-photo-input") as unknown as { src: string }).src).toBe("blob:preview");
+
+      save(el);
+      await settle(el);
+      expect(callWS).toHaveBeenCalledWith(expect.objectContaining({ type: "cookbook/create" }));
+      const [path, init] = fetchWithAuth.mock.calls[0];
+      expect(path).toBe("/api/cookbook/recipes/p1/image");
+      expect(init!.method).toBe("POST");
+      expect((init!.body as FormData).get("file")).toBeInstanceOf(File);
+      expect(location.pathname).toBe("/cookbook/recipe/p1");
+    });
+
+    it("a photo change alone counts as unsaved", async () => {
+      const { hass } = mockHass({ "cookbook/categories": categories, "cookbook/get": () => makeRecipe() });
+      const el = await mount<CookbookRecipeEditor>("cookbook-recipe-editor", { hass, recipeId: "r1" });
+      expect(el.dirty).toBe(false);
+      choosePhoto(el, photoFile());
+      expect(el.dirty).toBe(true);
+    });
+
+    it("removes the saved photo", async () => {
+      const recipe = makeRecipe({ image: "img", image_url: "/api/cookbook/images/img/large.webp?authSig=s" });
+      const { hass, fetchWithAuth } = mockHass(
+        { "cookbook/categories": categories, "cookbook/get": () => recipe, "cookbook/update": () => recipe },
+        { fetch: () => ok({ ...recipe, image: null, image_url: null }) },
+      );
+      const el = await mount<CookbookRecipeEditor>("cookbook-recipe-editor", { hass, recipeId: "r1" });
+      expect(($(el, "cookbook-photo-input") as unknown as { src: string }).src).toContain("authSig=s");
+      choosePhoto(el, null);
+      await settle(el);
+      expect(($(el, "cookbook-photo-input") as unknown as { src: string | null }).src).toBeNull();
+      save(el);
+      await settle(el);
+      expect(fetchWithAuth).toHaveBeenCalledWith("/api/cookbook/recipes/r1/image", { method: "DELETE" });
+    });
+
+    it("downloads the photo of an imported page after saving", async () => {
+      const { hass, callWS } = mockHass({
+        "cookbook/categories": categories,
+        "cookbook/create": () => makeRecipe({ id: "imp" }),
+        "cookbook/import_image": () => makeRecipe({ id: "imp", image: "img" }),
+      });
+      const draft = { ...makeRecipe(), source_url: "https://site.fr/r" };
+      const el = await mount<CookbookRecipeEditor>("cookbook-recipe-editor", {
+        hass,
+        draftImageUrl: "https://site.fr/photo.jpg",
+        draft,
+      });
+      expect(($(el, "cookbook-photo-input") as unknown as { src: string }).src).toBe("https://site.fr/photo.jpg");
+      save(el);
+      await settle(el);
+      expect(callWS).toHaveBeenCalledWith({
+        type: "cookbook/import_image",
+        recipe_id: "imp",
+        url: "https://site.fr/photo.jpg",
+      });
+      expect(location.pathname).toBe("/cookbook/recipe/imp");
+    });
+
+    it("the imported photo can be removed before saving", async () => {
+      const { hass, callWS } = mockHass({
+        "cookbook/categories": categories,
+        "cookbook/create": () => makeRecipe({ id: "imp" }),
+      });
+      const el = await mount<CookbookRecipeEditor>("cookbook-recipe-editor", {
+        hass,
+        draftImageUrl: "https://site.fr/photo.jpg",
+        draft: makeRecipe(),
+      });
+      choosePhoto(el, null);
+      save(el);
+      await settle(el);
+      expect(callWS).not.toHaveBeenCalledWith(expect.objectContaining({ type: "cookbook/import_image" }));
+    });
+
+    it("keeps the saved recipe and lets retry when the photo fails", async () => {
+      let attempt = 0;
+      const { hass, callWS } = mockHass(
+        {
+          "cookbook/categories": categories,
+          "cookbook/create": () => makeRecipe({ id: "p2" }),
+          "cookbook/update": () => makeRecipe({ id: "p2" }),
+        },
+        {
+          fetch: () =>
+            ++attempt === 1
+              ? new Response(JSON.stringify({ code: "invalid_image", message: "This file is not a valid photo" }), { status: 400 })
+              : ok(makeRecipe({ id: "p2", image: "img" })),
+        },
+      );
+      const el = await mount<CookbookRecipeEditor>("cookbook-recipe-editor", { hass });
+      type(el, "name", "Photo ratée");
+      choosePhoto(el, photoFile());
+      save(el);
+      await settle(el);
+      expect($(el, ".banner.error")!.textContent).toContain(
+        "La recette est enregistrée, mais la photo n'a pas pu être ajoutée (This file is not a valid photo)",
+      );
+      expect(location.pathname).toBe("/cookbook/new");
+
+      // Saving again updates the recipe (no second copy) and retries the photo.
+      save(el);
+      await settle(el);
+      expect(callWS.mock.calls.filter(([m]) => m.type === "cookbook/create")).toHaveLength(1);
+      expect(callWS).toHaveBeenCalledWith(expect.objectContaining({ type: "cookbook/update", recipe_id: "p2" }));
+      expect(location.pathname).toBe("/cookbook/recipe/p2");
+    });
+  });
+
   it("passes existing categories as suggestions", async () => {
     const { hass } = mockHass({ "cookbook/categories": categories });
     const el = await mount<CookbookRecipeEditor>("cookbook-recipe-editor", { hass });

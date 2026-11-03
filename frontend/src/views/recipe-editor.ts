@@ -3,6 +3,7 @@ import { CookbookApi, isApiError } from "../api";
 import "../components/category-input";
 import "../components/confirm-dialog";
 import "../components/item-list-editor";
+import "../components/photo-input";
 import type { ItemListLabels } from "../components/item-list-editor";
 import { formatDuration } from "../format";
 import { type Localize, type MessageKey, getLocalize } from "../i18n";
@@ -100,6 +101,13 @@ export function toFields(
   };
 }
 
+/** Pending change of the photo, applied after the recipe itself is saved. */
+export type PhotoChange =
+  | { kind: "keep" }
+  | { kind: "file"; file: File; preview: string }
+  | { kind: "url"; url: string }
+  | { kind: "remove" };
+
 /** Recipe creation (no recipeId) and edition. */
 export class CookbookRecipeEditor extends LitElement {
   static properties = {
@@ -118,7 +126,9 @@ export class CookbookRecipeEditor extends LitElement {
     duplicateOf: { state: true },
     suggestions: { state: true },
     draft: { attribute: false },
+    draftImageUrl: { attribute: false },
     importedFrom: { attribute: false },
+    photo: { state: true },
   };
 
   hass!: HomeAssistant;
@@ -138,8 +148,11 @@ export class CookbookRecipeEditor extends LitElement {
   suggestions: string[] = [];
   /** Prefilled, not yet saved recipe (URL import preview): a new recipe, dirty from the start. */
   draft?: RecipeFields;
+  /** Photo of the imported page, downloaded by the server on save. */
+  draftImageUrl?: string | null;
   /** Site name shown in the "imported from" banner. */
   importedFrom?: string;
+  photo: PhotoChange = { kind: "keep" };
 
   /** Last loaded/saved version: base of the conflict check and of the dirty state. */
   private original: Recipe | null = null;
@@ -170,6 +183,32 @@ export class CookbookRecipeEditor extends LitElement {
     super.disconnectedCallback();
     window.removeEventListener("beforeunload", this.onBeforeUnload);
     window.removeEventListener("keydown", this.onShortcut);
+    this.setPhoto({ kind: "keep" }); // releases the preview object URL
+  }
+
+  private setPhoto(photo: PhotoChange) {
+    if (this.photo.kind === "file") URL.revokeObjectURL(this.photo.preview);
+    this.photo = photo;
+  }
+
+  /** Photo shown in the editor: pending change, or the saved one. */
+  private get photoSrc(): string | null {
+    switch (this.photo.kind) {
+      case "file":
+        return this.photo.preview;
+      case "url":
+        return this.photo.url;
+      case "remove":
+        return null;
+      default:
+        return this.original?.image_url ?? null;
+    }
+  }
+
+  private onPhotoChanged(file: File | null) {
+    if (file) this.setPhoto({ kind: "file", file, preview: URL.createObjectURL(file) });
+    else if (this.original?.image) this.setPhoto({ kind: "remove" });
+    else this.setPhoto({ kind: "keep" });
   }
 
   protected willUpdate(changed: Map<string, unknown>) {
@@ -193,7 +232,7 @@ export class CookbookRecipeEditor extends LitElement {
 
   /** True when the form differs from the last loaded/saved version. */
   get dirty(): boolean {
-    return JSON.stringify(this.currentFields()) !== this.snapshot;
+    return this.photo.kind !== "keep" || JSON.stringify(this.currentFields()) !== this.snapshot;
   }
 
   /** Leave the editor, asking first if there are unsaved changes. */
@@ -214,7 +253,9 @@ export class CookbookRecipeEditor extends LitElement {
     this.steps = recipe ? recipe.steps.map((s) => ({ ...s })) : [];
     this.errors = {};
     this.conflict = null;
+    this.setPhoto({ kind: "keep" });
     this.snapshot = JSON.stringify(this.currentFields());
+    if (draft && this.draftImageUrl) this.setPhoto({ kind: "url", url: this.draftImageUrl });
     if (draft) {
       // Snapshot of the empty form: the draft counts as unsaved changes.
       this.form = formFromRecipe(draft);
@@ -277,6 +318,8 @@ export class CookbookRecipeEditor extends LitElement {
       this.original = saved;
       this.snapshot = JSON.stringify(fields);
       this.conflict = null;
+      // The recipe is saved; then the photo. If it fails, stay here (retry by saving again).
+      if (!(await this.applyPhoto(saved.id))) return;
       navigate(recipeUrl(saved.id), { replace: true });
     } catch (error) {
       const placeholders = isApiError(error) ? error.translation_placeholders : undefined;
@@ -294,6 +337,24 @@ export class CookbookRecipeEditor extends LitElement {
       }
     } finally {
       this.saving = false;
+    }
+  }
+
+  /** Sends the pending photo change; false (and a message) if it failed. */
+  private async applyPhoto(recipeId: string): Promise<boolean> {
+    const photo = this.photo;
+    try {
+      let saved: Recipe | null = null;
+      if (photo.kind === "file") saved = await this.api.uploadImage(recipeId, photo.file);
+      else if (photo.kind === "url") saved = await this.api.importImage(recipeId, photo.url);
+      else if (photo.kind === "remove") saved = await this.api.removeImage(recipeId);
+      if (saved) this.original = saved;
+      this.setPhoto({ kind: "keep" });
+      return true;
+    } catch (error) {
+      const message = isApiError(error) ? error.message : String(error);
+      this.error = this.t("photo_failed", { message });
+      return false;
     }
   }
 
@@ -342,6 +403,21 @@ export class CookbookRecipeEditor extends LitElement {
           </div>`
         : nothing}
       ${this.error ? html`<p class="banner error" role="alert">${this.error}</p>` : nothing}
+
+      <section class="card photo">
+        <cookbook-photo-input
+          .src=${this.photoSrc}
+          .labels=${{
+            add: t("add_photo"),
+            replace: t("replace_photo"),
+            remove: t("remove_photo"),
+            dropHint: t("photo_drop_hint"),
+            invalid: t("photo_invalid"),
+            tooLarge: t("photo_too_large"),
+          }}
+          @photo-changed=${(e: CustomEvent<{ file: File | null }>) => this.onPhotoChanged(e.detail.file)}
+        ></cookbook-photo-input>
+      </section>
 
       <section class="card">
         ${this.renderText("name", t("name"), { required: true, autofocus: !this.recipeId })}

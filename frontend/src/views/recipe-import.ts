@@ -30,6 +30,7 @@ export class CookbookRecipeImport extends LitElement {
     error: { state: true },
     draft: { state: true },
     duplicate: { state: true },
+    imageUrl: { state: true },
   };
 
   hass!: HomeAssistant;
@@ -38,6 +39,7 @@ export class CookbookRecipeImport extends LitElement {
   error: string | null = null;
   draft: RecipeFields | null = null;
   duplicate: RecipeSummary | null = null;
+  imageUrl: string | null = null;
 
   connectedCallback() {
     super.connectedCallback();
@@ -66,7 +68,8 @@ export class CookbookRecipeImport extends LitElement {
     this.error = null;
     this.duplicate = null;
     try {
-      const { recipe, duplicate } = await new CookbookApi(this.hass).scrape(url);
+      const { recipe, image_url, duplicate } = await new CookbookApi(this.hass).scrape(url);
+      this.imageUrl = image_url;
       // One recipe per source URL: an already imported page is not offered again.
       if (duplicate) this.duplicate = duplicate;
       else this.draft = recipe;
@@ -97,6 +100,7 @@ export class CookbookRecipeImport extends LitElement {
       return html`
         <cookbook-recipe-editor
           .hass=${this.hass}
+          .draftImageUrl=${this.imageUrl}
           .draft=${this.draft}
           .importedFrom=${siteName(this.draft.source_url ?? this.url)}
         ></cookbook-recipe-editor>

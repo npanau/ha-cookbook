@@ -12,6 +12,8 @@ const summary = (id: string, name: string, categories: string[] = []): RecipeSum
   cook_time: 20,
   total_time: null,
   image: null,
+  image_url: null,
+  thumbnail_url: null,
   updated_at: "2026-11-02T10:00:00+00:00",
 });
 
@@ -167,6 +169,16 @@ describe("recipe list", () => {
     const el = await mount<CookbookRecipeList>("cookbook-recipe-list", { hass });
     $<HTMLButtonElement>(el, ".new")!.click();
     expect(location.pathname).toBe("/cookbook/new");
+  });
+
+  it("shows the photo thumbnail on cards", async () => {
+    const withPhoto = { ...RECIPES[0], thumbnail_url: "/api/cookbook/images/a/thumb.webp?authSig=t" };
+    const { hass } = setup([withPhoto, RECIPES[1]]);
+    const el = await mount<CookbookRecipeList>("cookbook-recipe-list", { hass });
+    const cards = $$(el, ".recipe");
+    expect(cards[0].querySelector("img")!.getAttribute("src")).toContain("thumb.webp?authSig=t");
+    expect(cards[0].querySelector("img")!.getAttribute("loading")).toBe("lazy");
+    expect(cards[1].querySelector("img")).toBeNull();
   });
 
   it("opens the import view", async () => {

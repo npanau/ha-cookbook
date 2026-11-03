@@ -29,6 +29,13 @@ and fix it before saving. Nothing is saved until you do.
 - Sites change their pages from time to time, which can break their import until recipe-scrapers is
   updated: keep the integration up to date.
 
+## Photos
+
+One photo per recipe, taken or chosen from the editor (or imported with the recipe). Photos are resized
+and stored in your Home Assistant (`/config/cookbook/images/`, included in backups), with **all metadata
+removed** — a phone photo can carry the GPS position of where it was taken. They are only shown to
+logged-in Home Assistant users.
+
 ## Development
 
 Requirements: Docker, Node 24+, [uv](https://docs.astral.sh/uv/).

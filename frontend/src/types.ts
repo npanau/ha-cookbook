@@ -4,6 +4,8 @@ export interface HomeAssistant {
   language: string;
   locale?: { language: string };
   callWS<T>(msg: { type: string; [key: string]: unknown }): Promise<T>;
+  /** fetch() with the HA token (used for the photo upload). */
+  fetchWithAuth(path: string, init?: RequestInit): Promise<Response>;
 }
 
 /** Route given by HA to a custom panel: prefix is "/cookbook", path the rest. */
@@ -25,6 +27,9 @@ export interface RecipeSummary {
   cook_time: number | null;
   total_time: number | null;
   image: string | null;
+  /** Signed URLs of the photo (valid 24 h), null without photo. */
+  image_url: string | null;
+  thumbnail_url: string | null;
   updated_at: string;
   /** Search results only: ingredient lines containing a searched word. */
   matched_ingredients?: string[];

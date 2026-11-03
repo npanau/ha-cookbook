@@ -30,6 +30,13 @@ vérifier et la corriger avant de l'enregistrer. Rien n'est enregistré tant que
 - Les sites modifient leurs pages de temps en temps, ce qui peut casser leur import jusqu'à une mise à
   jour de recipe-scrapers : gardez l'intégration à jour.
 
+## Photos
+
+Une photo par recette, prise ou choisie depuis l'éditeur (ou importée avec la recette). Les photos sont
+redimensionnées et stockées dans votre Home Assistant (`/config/cookbook/images/`, inclus dans les
+sauvegardes), **sans aucune métadonnée** : une photo de téléphone peut contenir la position GPS de l'endroit
+où elle a été prise. Elles ne sont visibles que par les utilisateurs connectés à Home Assistant.
+
 ## Développement
 
 Voir la section *Development* du [README anglais](README.md#development).

@@ -172,7 +172,10 @@ def test_map_refuses_pages_without_recipe(values: dict) -> None:
 def test_parse_synthetic_json_ld_page() -> None:
     """End to end through the real recipe-scrapers, schema.org fallback."""
     page = (FIXTURES / "jsonld-recipe.html").read_text(encoding="utf-8")
-    fields = scraper._parse(page, "https://blog.example.org/tarte-aux-poires?utm=x")
+    fields, image_url = scraper._parse(
+        page, "https://blog.example.org/tarte-aux-poires?utm=x"
+    )
+    assert image_url == "https://blog.example.org/img/tarte.jpg"
     assert fields["name"] == "Tarte aux poires & amandes"
     # recipe-scrapers itself joins the lines of the description.
     assert fields["description"] == "Une tarte fondante. Parfaite en automne."
@@ -289,6 +292,9 @@ async def site(aiohttp_server, socket_enabled, monkeypatch):
     async def to_private(request):
         raise web.HTTPFound("http://192.168.1.10/admin")
 
+    async def photo(request):
+        return web.Response(body=b"\x89PNG fake", content_type="image/png")
+
     async def no_location(request):
         return web.Response(status=302)
 
@@ -316,6 +322,7 @@ async def site(aiohttp_server, socket_enabled, monkeypatch):
         "/to-private": to_private,
         "/loop": loop_,
         "/no-location": no_location,
+        "/photo.png": photo,
         "/missing": missing,
         "/json": json_,
         "/huge": huge,
@@ -356,6 +363,16 @@ async def test_fetch_errors(hass: HomeAssistant, site, path: str, code: str) -> 
     assert err.value.code == code
 
 
+async def test_fetch_image(hass: HomeAssistant, site) -> None:
+    assert await scraper.fetch_image(hass, site.url("/photo.png")) == b"\x89PNG fake"
+    with pytest.raises(ScrapeError) as err:
+        await scraper.fetch_image(hass, site.url("/recipe"))  # a web page
+    assert err.value.code == "invalid_image"
+    with pytest.raises(ScrapeError) as err:
+        await scraper.fetch_image(hass, site.url("/to-private"))
+    assert err.value.code == "blocked_url"
+
+
 async def test_fetch_unreachable_site(hass: HomeAssistant, site) -> None:
     with pytest.raises(ScrapeError) as err:
         await scraper.fetch_page(hass, "http://127.0.0.1:1/closed-port")
@@ -391,7 +408,7 @@ async def test_fetch_times_out(hass: HomeAssistant, site, monkeypatch) -> None:
 
 
 async def test_scrape_end_to_end(hass: HomeAssistant, site) -> None:
-    fields = await scraper.async_scrape(hass, site.url("/recipe"))
+    fields, _ = await scraper.async_scrape(hass, site.url("/recipe"))
     assert fields["name"] == "Tarte aux poires & amandes"
     assert fields["servings"] == 6
 
@@ -403,3 +420,17 @@ def test_normalize_url() -> None:
     )
     assert normalize_url("http://marmiton.org/r/x.aspx") == "marmiton.org/r/x.aspx"
     assert normalize_url("https://s.fr/r?id=2") == "s.fr/r?id=2"
+
+
+@pytest.mark.parametrize(
+    ("image", "expected"),
+    [
+        ("/img/a.jpg", "https://site.fr/img/a.jpg"),
+        ("https://cdn.site.fr/a.jpg", "https://cdn.site.fr/a.jpg"),
+        ("data:image/png;base64,AAAA", None),
+        ("   ", None),
+        (["https://a.jpg"], None),
+    ],
+)
+def test_image_url(image, expected) -> None:
+    assert scraper._image_url(FakeScraper(image=image), "https://site.fr/r") == expected

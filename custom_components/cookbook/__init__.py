@@ -24,6 +24,7 @@ from .const import (
     PANEL_WEBCOMPONENT,
     STATIC_URL,
 )
+from .images import register_views
 from .store import CookbookStore
 from .websocket_api import async_register_commands
 
@@ -37,8 +38,9 @@ type CookbookConfigEntry = ConfigEntry[CookbookStore]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Register the WebSocket commands (once, they cannot be unregistered)."""
+    """Register the WebSocket commands and photo views (once: no unregistering)."""
     async_register_commands(hass)
+    register_views(hass)
     return True
 
 

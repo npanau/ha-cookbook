@@ -90,5 +90,13 @@
   "import_error_too_large": "This page is too large to be imported.",
   "import_another": "Import another address",
   "duplicate_source_text": "Another recipe already has this source URL: “{name}”.",
-  "duplicate_source_field": "Already used by another recipe."
+  "duplicate_source_field": "Already used by another recipe.",
+  "photo": "Photo",
+  "add_photo": "Add a photo",
+  "replace_photo": "Replace",
+  "remove_photo": "Remove",
+  "photo_drop_hint": "or drop an image here",
+  "photo_invalid": "Accepted formats: JPEG, PNG, WebP.",
+  "photo_too_large": "The photo exceeds 15 MB.",
+  "photo_failed": "The recipe is saved, but the photo could not be added ({message}). Save again to retry."
 }

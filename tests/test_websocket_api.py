@@ -212,10 +212,15 @@ async def test_scrape_returns_a_preview_without_saving(
     user_ws: MockHAClientWebSocket,
 ) -> None:
     with patch(
-        "custom_components.cookbook.websocket_api.async_scrape", return_value=SCRAPED
+        "custom_components.cookbook.websocket_api.async_scrape",
+        return_value=(SCRAPED, "https://marmiton.org/photo.jpg"),
     ):
         result = await _ok(user_ws, "scrape", url="https://marmiton.org/x")
-    assert result == {"recipe": SCRAPED, "duplicate": None}
+    assert result == {
+        "recipe": SCRAPED,
+        "image_url": "https://marmiton.org/photo.jpg",
+        "duplicate": None,
+    }
     assert (await _ok(user_ws, "list"))["recipes"] == []
 
 
@@ -229,7 +234,8 @@ async def test_scrape_reports_an_existing_recipe(
         source_url="http://marmiton.org/recettes/creme-brulee.aspx/",
     )
     with patch(
-        "custom_components.cookbook.websocket_api.async_scrape", return_value=SCRAPED
+        "custom_components.cookbook.websocket_api.async_scrape",
+        return_value=(SCRAPED, None),
     ):
         result = await _ok(user_ws, "scrape", url="https://marmiton.org/autre")
     assert result["duplicate"]["id"] == existing["id"]

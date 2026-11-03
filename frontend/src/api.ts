@@ -58,9 +58,37 @@ export class CookbookApi {
     });
   }
 
-  /** Preview of the recipe at `url` (nothing saved), and an already imported duplicate. */
-  scrape(url: string): Promise<{ recipe: RecipeFields; duplicate: RecipeSummary | null }> {
+  /** Preview of the recipe at `url` (nothing saved), its photo URL, an already imported duplicate. */
+  scrape(url: string): Promise<{ recipe: RecipeFields; image_url: string | null; duplicate: RecipeSummary | null }> {
     return this.hass.callWS({ type: "cookbook/scrape", url });
+  }
+
+  /** Sets the photo of a recipe (resized and stored by the server). */
+  async uploadImage(recipeId: string, file: File): Promise<Recipe> {
+    const body = new FormData();
+    body.append("file", file);
+    return this.imageRequest(recipeId, { method: "POST", body });
+  }
+
+  removeImage(recipeId: string): Promise<Recipe> {
+    return this.imageRequest(recipeId, { method: "DELETE" });
+  }
+
+  /** Downloads the photo of an imported recipe (server side, same protections as the page). */
+  importImage(recipeId: string, url: string): Promise<Recipe> {
+    return this.hass.callWS<Recipe>({ type: "cookbook/import_image", recipe_id: recipeId, url });
+  }
+
+  private async imageRequest(recipeId: string, init: RequestInit): Promise<Recipe> {
+    const response = await this.hass.fetchWithAuth(
+      `/api/cookbook/recipes/${encodeURIComponent(recipeId)}/image`,
+      init,
+    );
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw { code: body.code ?? `http_${response.status}`, message: body.message ?? response.statusText } as ApiError;
+    }
+    return body as Recipe;
   }
 
   async delete(recipeId: string): Promise<void> {

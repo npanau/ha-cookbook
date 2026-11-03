@@ -229,6 +229,7 @@ export class CookbookRecipeView extends LitElement {
       </div>
 
       <article class="card">
+        ${recipe.image_url ? html`<img class="hero" src=${recipe.image_url} alt=${recipe.name} />` : nothing}
         <h1>${recipe.name}</h1>
         ${recipe.categories.length
           ? html`<div class="chips">${recipe.categories.map((c) => html`<span class="chip">${c}</span>`)}</div>`
@@ -392,7 +393,16 @@ export class CookbookRecipeView extends LitElement {
       .spacer {
         flex: 1;
       }
+      .hero {
+        display: block;
+        width: calc(100% + 48px);
+        max-height: 420px;
+        margin: -24px -24px 20px;
+        object-fit: cover;
+        border-radius: var(--cb-radius) var(--cb-radius) 0 0;
+      }
       article {
+        overflow: hidden;
         padding: 24px;
         font-size: var(--cb-text-size);
         line-height: 1.5;
@@ -451,6 +461,11 @@ export class CookbookRecipeView extends LitElement {
         }
         article {
           padding: 16px;
+        }
+        .hero {
+          width: calc(100% + 32px);
+          max-height: 260px;
+          margin: -16px -16px 16px;
         }
       }
       ul {

@@ -38,7 +38,15 @@ Nicolas déclenche lui-même : ne jamais s'y connecter, y copier des fichiers ou
     locales/privées refusées à chaque saut** (`blocked_url`), sauf si `COOKBOOK_ALLOW_PRIVATE_URLS=1`, défini
     **uniquement** pour le HA des tests E2E. Erreurs : `invalid_url`, `blocked_url`, `fetch_failed`, `not_a_recipe`,
     `too_large`.
-  - À venir : images dans `/config/cookbook/images/` servies par une `HomeAssistantView` avec chemins signés.
+  - `images.py` : **une photo par recette**, dans `/config/cookbook/images/<id>-large|thumb.webp` (inclus dans les
+    sauvegardes HA). Traitement Pillow dans l'executor : orientation EXIF appliquée, **toutes les métadonnées
+    supprimées** (GPS), WebP 1600 px et 480 px, 15 Mo / 60 Mpx max, JPEG/PNG/WebP. Envoi/suppression :
+    `POST|DELETE /api/cookbook/recipes/<id>/image` (vue authentifiée, tout utilisateur) ; affichage :
+    `GET /api/cookbook/images/<id>/<taille>.webp`, **authentifié uniquement** — les réponses WS portent des URL
+    signées 24 h (`image_url`, `thumbnail_url`, `async_sign_path`) pour les `<img>`. Remplacer ou supprimer une
+    recette supprime ses fichiers. `cookbook/import_image {recipe_id, url}` télécharge la photo d'une recette
+    importée (mêmes protections que la page). `image` reste un champ géré par le serveur.
+  - **Pillow** fait partie de HA lui-même : toujours disponible, et **interdit dans le manifest** (hassfest).
 - **Frontend** (`frontend/`) : web component **Lit 3 + TypeScript**, bundle ES unique via **Vite**
   → `custom_components/cookbook/frontend/cookbook-panel.js`.
   - `cookbook-panel.ts` (racine : barre d'outils, routage), `router.ts` (sous-routes `/cookbook`,
@@ -48,6 +56,9 @@ Nicolas déclenche lui-même : ne jamais s'y connecter, y copier des fichiers ou
     composants internes de HA (`ha-textfield`, `ha-dialog`…) : instables et pas toujours chargés. Exceptions :
     `ha-menu-button`, `ha-icon`.
   - Préférences par appareil (coches du mode cuisine, texte agrandi) en `localStorage`, toujours dans un try/catch.
+  - Photo dans l'éditeur (`components/photo-input.ts`) : changement en attente (`PhotoChange`), appliqué **après**
+    l'enregistrement de la recette (envoi `fetchWithAuth`, suppression, ou import de la photo de la page) ; en cas
+    d'échec, la recette reste enregistrée, l'éditeur reste ouvert et un nouvel enregistrement réessaie.
 - **Droits** : tout utilisateur peut lire / créer / modifier / importer ; **suppression réservée aux admins**
   (décorateur `@websocket_api.require_admin`). Chaque recette garde `created_by` / `updated_by` (id utilisateur HA) ;
   `get` / `create` / `update` ajoutent `created_by_name` / `updated_by_name`, résolus à la lecture.
@@ -100,6 +111,8 @@ Modification TypeScript : le watch reconstruit, il suffit de recharger la page (
   connexion de HA : onboarding (admin `e2e-admin`, langue fr), ajout de l'intégration par le config flow, compte non
   admin `e2e-membre` (WebSocket `config/auth/create`), puis jetons injectés dans `localStorage.hassTokens`
   (`frontend/e2e/.auth/`, non versionné). Refuse de tourner sur une instance déjà initialisée.
+- **Photos** : `frontend/e2e/sites/tarte.jpg` est une image générée (aucun contenu tiers), utilisée pour l'envoi
+  (CB09) et comme photo de la page factice importée (CB08). Les tests Python génèrent leurs images avec Pillow.
 - **Import** : le conteneur `recipes-site` (profil `e2e`) sert les pages factices de `frontend/e2e/sites/` sur
   `http://recipes-site:8000/` ; ajouter `?t=<uid>` aux URL pour qu'elles restent uniques par test.
 - **Scénarios** `frontend/e2e/cbNN-*.spec.ts`, titres `CBNN : …` ; projets `desktop` et `mobile` (Pixel 7), connectés
@@ -135,5 +148,7 @@ Modification TypeScript : le watch reconstruit, il suffit de recharger la page (
 
 - Code, commentaires, commits, `README.md` : **anglais**. `CLAUDE.md`, `README.fr.md`, échanges : français.
 - Clés de `manifest.json` : `domain`, `name`, puis ordre alphabétique (exigé par hassfest).
+- Tests Python : chaque test a son propre dossier de configuration HA (`tests/conftest.py`), les photos écrites
+  ne fuient pas d'un test à l'autre.
 - Toute nouvelle fonctionnalité s'accompagne de tests : pytest pour le backend, Vitest (`frontend/test/`) pour le
   frontend, et un scénario E2E quand elle touche un parcours utilisateur.

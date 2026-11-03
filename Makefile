@@ -44,9 +44,9 @@ E2E_ARGS = $(if $(GREP),--grep "$(GREP)") $(if $(PROJECT),--project=$(PROJECT))
 
 e2e: ## E2E tests (desktop + mobile)
 	cd frontend && npm run build
-	docker compose --profile e2e up -d --force-recreate homeassistant-e2e
+	docker compose --profile e2e up -d --force-recreate homeassistant-e2e recipes-site
 	cd frontend && npx playwright test $(E2E_ARGS) $(E2E_EXTRA); status=$$?; \
-		cd .. && docker compose --profile e2e stop homeassistant-e2e; exit $$status
+		cd .. && docker compose --profile e2e stop homeassistant-e2e recipes-site; exit $$status
 
 e2e-headed: ## E2E tests with a visible browser
 	$(MAKE) e2e E2E_EXTRA="--headed"

@@ -227,6 +227,33 @@ describe("recipe editor", () => {
     expect(el.dirty).toBe(false);
   });
 
+  it("explains a source URL already used by another recipe", async () => {
+    const { hass } = mockHass({
+      "cookbook/categories": categories,
+      "cookbook/create": () =>
+        Promise.reject({
+          code: "duplicate_source",
+          message: "Another recipe already has this source URL",
+          translation_placeholders: { recipe_id: "old", name: "Ma crème brûlée" },
+        }),
+    });
+    const el = await mount<CookbookRecipeEditor>("cookbook-recipe-editor", { hass });
+    type(el, "name", "Copie");
+    type(el, "source_url", "https://www.marmiton.org/x");
+    save(el);
+    await settle(el);
+    expect($(el, ".duplicate")!.textContent).toContain(
+      "Une autre recette a déjà cette URL source : « Ma crème brûlée ».",
+    );
+    expect($(el, '[name="source_url"]')!.getAttribute("aria-invalid")).toBe("true");
+    expect(location.pathname).toBe("/cookbook/new");
+
+    // Opening the existing recipe asks first (the form has unsaved changes).
+    $<HTMLButtonElement>(el, ".open-duplicate")!.click();
+    await settle(el);
+    expect($(el, "cookbook-confirm-dialog")!.hasAttribute("open")).toBe(true);
+  });
+
   it("shows server errors", async () => {
     const { hass } = mockHass({
       "cookbook/categories": categories,

@@ -73,5 +73,22 @@
   "fewer_servings": "Une de moins",
   "more_servings": "Une de plus",
   "scaled_notice": "Quantités adaptées pour {count} {unit} (recette pour {original})",
-  "scaled_reset": "Revenir à {original}"
+  "scaled_reset": "Revenir à {original}",
+  "import": "Importer",
+  "import_recipe": "Importer une recette",
+  "import_hint": "Collez l'adresse d'une page de recette (Marmiton et la plupart des sites de cuisine).",
+  "import_url": "Adresse de la recette",
+  "analyze": "Analyser",
+  "analyzing": "Analyse…",
+  "imported_from": "Importée depuis {site} : vérifiez, puis enregistrez.",
+  "duplicate_text": "Cette recette est déjà dans le livre : « {name} ».",
+  "duplicate_open": "Voir la recette",
+  "import_error_invalid_url": "L'adresse doit commencer par http:// ou https://",
+  "import_error_blocked_url": "Les adresses du réseau local ne peuvent pas être importées.",
+  "import_error_fetch_failed": "Le site n'a pas pu être joint ({message}).",
+  "import_error_not_a_recipe": "Aucune recette n'a été trouvée sur cette page.",
+  "import_error_too_large": "Cette page est trop lourde pour être importée.",
+  "import_another": "Importer une autre adresse",
+  "duplicate_source_text": "Une autre recette a déjà cette URL source : « {name} ».",
+  "duplicate_source_field": "Déjà utilisée par une autre recette."
 }

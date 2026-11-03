@@ -12,10 +12,17 @@ from homeassistant.core import HomeAssistant, callback
 
 from .const import DOMAIN
 from .models import FIELD_VALIDATORS
-from .store import CookbookStore, RecipeConflictError, RecipeNotFoundError
+from .scraper import ScrapeError, async_scrape
+from .store import (
+    CookbookStore,
+    DuplicateSourceError,
+    RecipeConflictError,
+    RecipeNotFoundError,
+)
 
 ERR_CONFLICT = "conflict"
 ERR_NOT_LOADED = "not_loaded"
+ERR_DUPLICATE_SOURCE = "duplicate_source"
 
 type _Handler = Callable[
     [HomeAssistant, websocket_api.ActiveConnection, dict[str, Any], CookbookStore],
@@ -36,6 +43,7 @@ def async_register_commands(hass: HomeAssistant) -> None:
         ws_delete,
         ws_search,
         ws_categories,
+        ws_scrape,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -58,6 +66,21 @@ def _with_store(func: _Handler) -> websocket_api.AsyncWebSocketCommandHandler:
         except RecipeNotFoundError:
             connection.send_error(
                 msg["id"], websocket_api.ERR_NOT_FOUND, "Recipe not found"
+            )
+        except ScrapeError as err:
+            connection.send_error(msg["id"], err.code, str(err))
+        except DuplicateSourceError as err:
+            # The existing recipe travels in the placeholders, for a link in the UI.
+            connection.send_error(
+                msg["id"],
+                ERR_DUPLICATE_SOURCE,
+                "Another recipe already has this source URL",
+                translation_key=ERR_DUPLICATE_SOURCE,
+                translation_domain=DOMAIN,
+                translation_placeholders={
+                    "recipe_id": err.existing["id"],
+                    "name": err.existing["name"],
+                },
             )
         except RecipeConflictError:
             connection.send_error(
@@ -169,3 +192,18 @@ async def ws_search(hass, connection, msg, store: CookbookStore) -> None:
 @_with_store
 async def ws_categories(hass, connection, msg, store: CookbookStore) -> None:
     connection.send_result(msg["id"], {"categories": store.categories()})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "cookbook/scrape",
+        vol.Required("url"): vol.All(str, vol.Length(min=1, max=2000)),
+    }
+)
+@websocket_api.async_response
+@_with_store
+async def ws_scrape(hass, connection, msg, store: CookbookStore) -> None:
+    """Preview of the recipe at `url` (nothing saved), plus an existing duplicate."""
+    fields = await async_scrape(hass, msg["url"])
+    duplicate = store.find_by_source_url(msg["url"], fields["source_url"])
+    connection.send_result(msg["id"], {"recipe": fields, "duplicate": duplicate})

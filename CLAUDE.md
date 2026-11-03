@@ -29,12 +29,20 @@ Nicolas déclenche lui-même : ne jamais s'y connecter, y copier des fichiers ou
   - `websocket_api.py` : `cookbook/list|get|create|update|delete|search|categories`. `update` est **partiel** et
     accepte `expected_updated_at` (erreur `conflict` si la recette a changé). Erreurs : `not_found`, `unauthorized`,
     `conflict`, `not_loaded`, `invalid_format`.
-  - À venir : `cookbook/scrape` (`recipe-scrapers` + JSON-LD), images dans `/config/cookbook/images/` servies par une
-    `HomeAssistantView` avec chemins signés.
+  - `scraper.py` + `cookbook/scrape {url}` : import par URL, renvoie un **aperçu non enregistré** (`recipe`) et un
+    éventuel doublon (`duplicate`, même URL source normalisée). `recipe-scrapers` (version identique dans le manifest
+    et `pyproject.toml`) fait l'analyse, avec son repli schema.org/JSON-LD pour les sites inconnus ; on ne teste
+    **que notre partie** (récupération, conversion, nettoyage du titre) avec des extracteurs simulés et des pages
+    factices — **jamais de contenu de sites tiers dans le dépôt**. Import de la bibliothèque dans l'executor (lent).
+  - Récupération : session HTTP de HA, 15 s, 5 Mo, HTML seulement, redirections suivies à la main. **Adresses
+    locales/privées refusées à chaque saut** (`blocked_url`), sauf si `COOKBOOK_ALLOW_PRIVATE_URLS=1`, défini
+    **uniquement** pour le HA des tests E2E. Erreurs : `invalid_url`, `blocked_url`, `fetch_failed`, `not_a_recipe`,
+    `too_large`.
+  - À venir : images dans `/config/cookbook/images/` servies par une `HomeAssistantView` avec chemins signés.
 - **Frontend** (`frontend/`) : web component **Lit 3 + TypeScript**, bundle ES unique via **Vite**
   → `custom_components/cookbook/frontend/cookbook-panel.js`.
   - `cookbook-panel.ts` (racine : barre d'outils, routage), `router.ts` (sous-routes `/cookbook`,
-    `/cookbook/recipe/<id>` ; navigation via `history.pushState` + événement `location-changed`, comme HA),
+    `/cookbook/recipe/<id>`, `/new`, `/edit/<id>`, `/import[?url=…]` ; navigation via `history.pushState` + événement `location-changed`, comme HA),
     `api.ts` (client typé des commandes WS), `views/` (écrans), `components/`, `print.ts` (impression via iframe).
   - **Composants maison uniquement**, stylés avec les variables CSS du thème HA (`styles.ts`). Ne pas utiliser les
     composants internes de HA (`ha-textfield`, `ha-dialog`…) : instables et pas toujours chargés. Exceptions :
@@ -92,6 +100,8 @@ Modification TypeScript : le watch reconstruit, il suffit de recharger la page (
   connexion de HA : onboarding (admin `e2e-admin`, langue fr), ajout de l'intégration par le config flow, compte non
   admin `e2e-membre` (WebSocket `config/auth/create`), puis jetons injectés dans `localStorage.hassTokens`
   (`frontend/e2e/.auth/`, non versionné). Refuse de tourner sur une instance déjà initialisée.
+- **Import** : le conteneur `recipes-site` (profil `e2e`) sert les pages factices de `frontend/e2e/sites/` sur
+  `http://recipes-site:8000/` ; ajouter `?t=<uid>` aux URL pour qu'elles restent uniques par test.
 - **Scénarios** `frontend/e2e/cbNN-*.spec.ts`, titres `CBNN : …` ; projets `desktop` et `mobile` (Pixel 7), connectés
   en admin ; fixture `member` pour le compte non admin. Les tests tournent en parallèle sur la même instance :
   **toujours des noms uniques** (fixture `uid`) et des assertions limitées à ses propres données.
@@ -99,12 +109,23 @@ Modification TypeScript : le watch reconstruit, il suffit de recharger la page (
   **Pas de comparaison de captures d'écran** (rendu des polices différent Mac / Linux).
 - Échec en CI : rapport et traces en artefact `playwright-report`, logs HA dans le job.
 
-## Versions
+## Versions et dépendances
 
-La version HA du Docker (`HA_VERSION` dans `docker-compose.yml`) doit correspondre à celle imposée par
-`pytest-homeassistant-custom-component` dans `pyproject.toml`, ainsi que `home-assistant-frontend`
-(version lue dans le `manifest.json` du composant `frontend` de HA). Les mettre à jour ensemble.
-La version de l'intégration (`manifest.json`) sert aussi au cache-busting du bundle (`?v=`).
+- **Groupes à faire évoluer ensemble**, vérifiés par `tests/test_versions.py` (la CI échoue sinon) :
+  - `recipe-scrapers` : `manifest.json` (installé par HA chez l'utilisateur), `pyproject.toml` et `uv.lock` ;
+  - Home Assistant : image Docker (`HA_VERSION` dans `docker-compose.yml`) = version de HA imposée par
+    `pytest-homeassistant-custom-component`, et `home-assistant-frontend` = version requise par ce HA.
+- **Renovate** (`renovate.json`, application GitHub) ouvre les PR de mise à jour le lundi matin, après 3 jours de
+  recul sur chaque version : un PR par groupe ci-dessus (règles regex pour le manifest et l'image Docker), un pour
+  les dépendances npm mineures, un pour les actions GitHub. Images HA stables uniquement. Valider la config :
+  `docker run --rm -v "$PWD/renovate.json:/repo/renovate.json:ro" -w /repo node:24-alpine npx --yes --package
+  renovate@latest -- renovate-config-validator --strict renovate.json` (Renovate récent exige Node 24).
+- **PR Renovate npm** : Renovate ne reconstruit pas le bundle ; si la sortie change, le job « bundle à jour »
+  échoue → récupérer la branche, `make build`, commiter le bundle sur la branche.
+- **PR Home Assistant** : Renovate peut proposer une image HA plus récente que celle de
+  `pytest-homeassistant-custom-component` (publiée quelques jours après) → `test_versions` échoue ; attendre la
+  version correspondante de la bibliothèque de test, ou aligner l'image à la main.
+- La version de l'intégration (`manifest.json`) sert aussi au cache-busting du bundle (`?v=`).
 
 ## Conventions
 

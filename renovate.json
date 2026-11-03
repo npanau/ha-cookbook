@@ -1,0 +1,57 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Paris",
+  "schedule": ["before 7am on monday"],
+  "labels": ["dependencies"],
+  "minimumReleaseAge": "3 days",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "recipe-scrapers, installed by Home Assistant from the integration manifest",
+      "managerFilePatterns": ["/^custom_components/cookbook/manifest\\.json$/"],
+      "matchStrings": ["\"(?<depName>recipe-scrapers)==(?<currentValue>[^\"]+)\""],
+      "datasourceTemplate": "pypi"
+    },
+    {
+      "customType": "regex",
+      "description": "Home Assistant image of the dev and E2E instances",
+      "managerFilePatterns": ["/^docker-compose\\.yml$/"],
+      "matchStrings": ["home-assistant:\\$\\{HA_VERSION:-(?<currentValue>[0-9.]+)\\}"],
+      "depNameTemplate": "ghcr.io/home-assistant/home-assistant",
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "recipe-scrapers: manifest, pyproject and uv.lock in one PR (checked by tests/test_versions.py)",
+      "matchPackageNames": ["recipe-scrapers"],
+      "groupName": "recipe-scrapers"
+    },
+    {
+      "description": "Home Assistant: Docker image, test library and frontend package move together (checked by tests/test_versions.py)",
+      "matchPackageNames": [
+        "ghcr.io/home-assistant/home-assistant",
+        "pytest-homeassistant-custom-component",
+        "home-assistant-frontend"
+      ],
+      "groupName": "Home Assistant"
+    },
+    {
+      "description": "Stable Home Assistant releases only (no betas)",
+      "matchPackageNames": ["ghcr.io/home-assistant/home-assistant"],
+      "allowedVersions": "/^\\d+\\.\\d+\\.\\d+$/"
+    },
+    {
+      "description": "Frontend dependencies: one PR for minor and patch updates",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "frontend (minor and patch)"
+    },
+    {
+      "description": "GitHub Actions: one PR",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    }
+  ]
+}

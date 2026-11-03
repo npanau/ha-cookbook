@@ -73,5 +73,22 @@
   "fewer_servings": "One less",
   "more_servings": "One more",
   "scaled_notice": "Quantities adapted for {count} {unit} (recipe for {original})",
-  "scaled_reset": "Back to {original}"
+  "scaled_reset": "Back to {original}",
+  "import": "Import",
+  "import_recipe": "Import a recipe",
+  "import_hint": "Paste the address of a recipe page (Marmiton and most recipe sites).",
+  "import_url": "Recipe address",
+  "analyze": "Analyze",
+  "analyzing": "Analyzing…",
+  "imported_from": "Imported from {site}: check, then save.",
+  "duplicate_text": "This recipe is already in the cookbook: “{name}”.",
+  "duplicate_open": "Open the recipe",
+  "import_error_invalid_url": "The address must start with http:// or https://",
+  "import_error_blocked_url": "Addresses of the local network cannot be imported.",
+  "import_error_fetch_failed": "The site could not be reached ({message}).",
+  "import_error_not_a_recipe": "No recipe was found on this page.",
+  "import_error_too_large": "This page is too large to be imported.",
+  "import_another": "Import another address",
+  "duplicate_source_text": "Another recipe already has this source URL: “{name}”.",
+  "duplicate_source_field": "Already used by another recipe."
 }

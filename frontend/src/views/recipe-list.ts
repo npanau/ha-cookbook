@@ -2,7 +2,7 @@ import { LitElement, css, html, nothing } from "lit";
 import { CookbookApi, isApiError } from "../api";
 import { formatDuration, totalTime } from "../format";
 import { getLocalize } from "../i18n";
-import { NEW_URL, navigate, recipeUrl, rememberListSearch } from "../router";
+import { IMPORT_URL, NEW_URL, navigate, recipeUrl, rememberListSearch } from "../router";
 import { sharedStyles } from "../styles";
 import { highlight } from "../text";
 import type { Category, HomeAssistant, RecipeSummary } from "../types";
@@ -143,6 +143,9 @@ export class CookbookRecipeList extends LitElement {
             </button>`
           : nothing}
       </div>
+      <button class="btn import" @click=${() => navigate(IMPORT_URL)}>
+        <ha-icon icon="mdi:web-plus"></ha-icon><span class="new-label">${t("import")}</span>
+      </button>
       <button class="btn primary new" @click=${() => navigate(NEW_URL)}>
         <ha-icon icon="mdi:plus"></ha-icon><span class="new-label">${t("new_recipe")}</span>
       </button>
@@ -238,7 +241,8 @@ export class CookbookRecipeList extends LitElement {
         gap: 8px;
         align-items: center;
       }
-      .top .new {
+      .top .new,
+      .top .import {
         flex: none;
         min-height: 44px;
         border-radius: 22px;

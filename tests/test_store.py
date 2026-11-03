@@ -10,6 +10,7 @@ from custom_components.cookbook.models import RECIPE_FIELDS_SCHEMA, fold
 from custom_components.cookbook.store import (
     STORAGE_KEY,
     CookbookStore,
+    DuplicateSourceError,
     RecipeConflictError,
     RecipeNotFoundError,
 )
@@ -118,6 +119,50 @@ async def test_returned_recipes_are_copies(hass: HomeAssistant, hass_storage) ->
     recipe["categories"].append("hacked")
     store.get(recipe["id"])["categories"].append("hacked")
     assert store.get(recipe["id"])["categories"] == ["Hiver"]
+
+
+async def test_one_recipe_per_source_url(hass: HomeAssistant, hass_storage) -> None:
+    store = await _store(hass)
+    first = await store.async_create(
+        {"name": "Crème", "source_url": "https://www.marmiton.org/r/creme.aspx"}, None
+    )
+    other = await store.async_create({"name": "Autre"}, None)
+
+    # Same page, written differently: refused, with the existing recipe.
+    with pytest.raises(DuplicateSourceError) as err:
+        await store.async_create(
+            {"name": "Copie", "source_url": "http://marmiton.org/r/creme.aspx/"}, None
+        )
+    assert err.value.existing["id"] == first["id"]
+    with pytest.raises(DuplicateSourceError):
+        await store.async_update(
+            other["id"], {"source_url": "https://marmiton.org/r/creme.aspx"}, None
+        )
+
+    # A recipe keeps its own URL; another URL or no URL is fine.
+    await store.async_update(
+        first["id"], {"source_url": "https://www.marmiton.org/r/creme.aspx#x"}, None
+    )
+    await store.async_update(other["id"], {"source_url": "https://site.fr/a"}, None)
+    await store.async_create({"name": "Sans source"}, None)
+    assert len(store.list()) == 3
+
+
+async def test_existing_duplicates_stay_editable(
+    hass: HomeAssistant, hass_storage
+) -> None:
+    """Duplicates saved before the rule: editing one without changing its URL works."""
+    store = await _store(hass)
+    url = "https://www.marmiton.org/r/creme.aspx"
+    first = await store.async_create({"name": "Crème", "source_url": url}, None)
+    copy_ = await store.async_create({"name": "Crème 2"}, None)
+    store._recipes[copy_["id"]]["source_url"] = url  # as before the rule existed
+
+    updated = await store.async_update(
+        copy_["id"], {"name": "Crème bis", "source_url": url}, None
+    )
+    assert updated["name"] == "Crème bis"
+    await store.async_update(first["id"], {"notes": "ok", "source_url": url}, None)
 
 
 async def test_update_conflict(hass: HomeAssistant, hass_storage) -> None:

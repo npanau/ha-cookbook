@@ -33,11 +33,22 @@ services:
       - "8124:8123"
     environment:
       TZ: Europe/Paris
+      # Lets this test instance import from recipes-site (a private address). Never elsewhere.
+      COOKBOOK_ALLOW_PRIVATE_URLS: "1"
     tmpfs:
       - /config
     volumes:
       - ./frontend/e2e/ha/configuration.yaml:/config/configuration.yaml:ro
       - ./custom_components/cookbook:/config/custom_components/cookbook:ro
+    profiles: ["e2e"]
+
+  # Synthetic recipe pages for the import E2E tests (http://recipes-site:8000/...).
+  recipes-site:
+    image: python:3.14-alpine
+    container_name: cookbook-recipes-site
+    command: python -m http.server 8000 --directory /sites
+    volumes:
+      - ./frontend/e2e/sites:/sites:ro
     profiles: ["e2e"]
 
 volumes:

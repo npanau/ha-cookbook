@@ -169,6 +169,13 @@ describe("recipe list", () => {
     expect(location.pathname).toBe("/cookbook/new");
   });
 
+  it("opens the import view", async () => {
+    const { hass } = setup();
+    const el = await mount<CookbookRecipeList>("cookbook-recipe-list", { hass });
+    $<HTMLButtonElement>(el, ".import")!.click();
+    expect(location.pathname).toBe("/cookbook/import");
+  });
+
   it("shows API errors", async () => {
     const { hass } = mockHass({
       "cookbook/list": () => Promise.reject({ code: "not_loaded", message: "Cookbook is not set up" }),

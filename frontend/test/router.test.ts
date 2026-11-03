@@ -7,6 +7,7 @@ describe("router", () => {
     expect(parsePath("/")).toEqual({ name: "list" });
     expect(parsePath("/recipe/abc")).toEqual({ name: "recipe", id: "abc" });
     expect(parsePath("/recipe")).toEqual({ name: "not-found" });
+    expect(parsePath("/import")).toEqual({ name: "import" });
     expect(parsePath("/unknown/x/y")).toEqual({ name: "not-found" });
   });
 

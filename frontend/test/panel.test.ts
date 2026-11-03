@@ -50,6 +50,14 @@ describe("panel", () => {
     expect(spy).toHaveBeenCalledWith("/cookbook/recipe/r1");
   });
 
+  it("shows the import view, which guards the back arrow too", async () => {
+    const el = await panel("/import");
+    const view = $(el, "cookbook-recipe-import") as HTMLElement & { requestLeave(url: string): void };
+    const spy = vi.spyOn(view, "requestLeave").mockImplementation(() => undefined);
+    $<HTMLButtonElement>(el, ".back")!.click();
+    expect(spy).toHaveBeenCalledWith("/cookbook");
+  });
+
   it("handles unknown routes", async () => {
     const el = await panel("/nope");
     expect($(el, ".message")!.textContent).toContain("Page introuvable");

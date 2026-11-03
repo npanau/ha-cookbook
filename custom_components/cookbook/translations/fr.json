@@ -21,5 +21,10 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "duplicate_source": {
+      "message": "Une autre recette a déjà cette URL source : « {name} »."
+    }
   }
 }

@@ -50,7 +50,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Start the throwaway Home Assistant
-        run: docker compose --profile e2e up -d homeassistant-e2e
+        run: docker compose --profile e2e up -d homeassistant-e2e recipes-site
         working-directory: .
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test

@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import uuid
 from typing import Any
+from urllib.parse import urlsplit
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -50,6 +51,14 @@ class RecipeConflictError(HomeAssistantError):
     """The recipe changed since the client loaded it."""
 
 
+class DuplicateSourceError(HomeAssistantError):
+    """Another recipe already has this source URL (one recipe per source)."""
+
+    def __init__(self, existing: dict[str, Any]) -> None:
+        super().__init__(existing["id"])
+        self.existing = existing
+
+
 class _CookbookStorage(Store[dict[str, Any]]):
     """Store with the schema migrations of the cookbook data."""
 
@@ -83,6 +92,14 @@ def _matched_ingredients(recipe: dict[str, Any], tokens: list[str]) -> list[str]
         for item in recipe["ingredients"]
         if any(token in fold(item["text"]) for token in tokens)
     ][:MAX_MATCHED_INGREDIENTS]
+
+
+def normalize_url(url: str) -> str:
+    """Comparable form of a source URL: no scheme, fragment or trailing slash."""
+    parts = urlsplit(url.strip())
+    path = parts.path.rstrip("/")
+    query = f"?{parts.query}" if parts.query else ""
+    return f"{(parts.hostname or '').removeprefix('www.')}{path}{query}"
 
 
 def _sort_key(recipe: dict[str, Any]) -> str:
@@ -125,6 +142,23 @@ class CookbookStore:
         if recipe_id not in self._recipes:
             raise RecipeNotFoundError(recipe_id)
         return copy.deepcopy(self._recipes[recipe_id])
+
+    def find_by_source_url(self, *urls: str) -> dict[str, Any] | None:
+        """Summary of a recipe already imported from one of these URLs."""
+        wanted = {normalize_url(url) for url in urls if url}
+        for recipe in self._recipes.values():
+            source = recipe.get("source_url")
+            if source and normalize_url(source) in wanted:
+                return _summary(recipe)
+        return None
+
+    def _check_source_url(self, url: str | None, recipe_id: str | None = None) -> None:
+        """Refuse a source URL already used by another recipe."""
+        if not url:
+            return
+        existing = self.find_by_source_url(url)
+        if existing and existing["id"] != recipe_id:
+            raise DuplicateSourceError(existing)
 
     def categories(self) -> list[dict[str, Any]]:
         """Categories with their recipe count; spelling of the first occurrence wins."""
@@ -170,6 +204,7 @@ class CookbookStore:
     async def async_create(
         self, fields: dict[str, Any], user_id: str | None
     ) -> dict[str, Any]:
+        self._check_source_url(fields.get("source_url"))
         now = dt_util.utcnow().isoformat()
         recipe = {
             "id": uuid.uuid4().hex,
@@ -200,6 +235,13 @@ class CookbookStore:
             and expected_updated_at != recipe["updated_at"]
         ):
             raise RecipeConflictError(recipe_id)
+        # Only a changed URL is checked: duplicates made before this rule stay editable.
+        new_url = fields.get("source_url")
+        old_url = recipe.get("source_url")
+        if new_url and (
+            not old_url or normalize_url(new_url) != normalize_url(old_url)
+        ):
+            self._check_source_url(new_url, recipe_id)
         recipe.update(copy.deepcopy(fields))
         recipe["updated_at"] = dt_util.utcnow().isoformat()
         recipe["updated_by"] = user_id

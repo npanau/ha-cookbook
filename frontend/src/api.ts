@@ -4,6 +4,8 @@ import type { Category, HomeAssistant, Recipe, RecipeFields, RecipeSummary } fro
 export interface ApiError {
   code: string;
   message: string;
+  /** Extra data of some errors (e.g. duplicate_source: recipe_id, name). */
+  translation_placeholders?: Record<string, string>;
 }
 
 export function isApiError(error: unknown): error is ApiError {
@@ -54,6 +56,11 @@ export class CookbookApi {
       ...(expectedUpdatedAt ? { expected_updated_at: expectedUpdatedAt } : {}),
       ...fields,
     });
+  }
+
+  /** Preview of the recipe at `url` (nothing saved), and an already imported duplicate. */
+  scrape(url: string): Promise<{ recipe: RecipeFields; duplicate: RecipeSummary | null }> {
+    return this.hass.callWS({ type: "cookbook/scrape", url });
   }
 
   async delete(recipeId: string): Promise<void> {

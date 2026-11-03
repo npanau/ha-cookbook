@@ -1,6 +1,7 @@
 """WebSocket API tests: commands, permissions and errors."""
 
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -11,6 +12,7 @@ from pytest_homeassistant_custom_component.typing import (
 )
 
 from custom_components.cookbook.const import DOMAIN
+from custom_components.cookbook.scraper import ScrapeError
 
 
 @pytest.fixture
@@ -188,3 +190,75 @@ async def test_author_names_when_unknown_or_deleted(
         fetched = await _ok(admin_ws, "get", recipe_id=recipe["id"])
         assert fetched["created_by_name"] is None
         assert fetched["updated_by_name"] is None
+
+
+SCRAPED = {
+    "name": "Crème brûlée",
+    "description": None,
+    "categories": ["Dessert"],
+    "prep_time": 20,
+    "cook_time": 50,
+    "total_time": 70,
+    "servings": 8,
+    "servings_unit": None,
+    "ingredients": [{"text": "6 jaunes d'oeuf", "section": None}],
+    "steps": [{"text": "Cuire.", "section": None}],
+    "notes": None,
+    "source_url": "https://www.marmiton.org/recettes/creme-brulee.aspx",
+}
+
+
+async def test_scrape_returns_a_preview_without_saving(
+    user_ws: MockHAClientWebSocket,
+) -> None:
+    with patch(
+        "custom_components.cookbook.websocket_api.async_scrape", return_value=SCRAPED
+    ):
+        result = await _ok(user_ws, "scrape", url="https://marmiton.org/x")
+    assert result == {"recipe": SCRAPED, "duplicate": None}
+    assert (await _ok(user_ws, "list"))["recipes"] == []
+
+
+async def test_scrape_reports_an_existing_recipe(
+    user_ws: MockHAClientWebSocket,
+) -> None:
+    existing = await _ok(
+        user_ws,
+        "create",
+        name="Ma crème brûlée",
+        source_url="http://marmiton.org/recettes/creme-brulee.aspx/",
+    )
+    with patch(
+        "custom_components.cookbook.websocket_api.async_scrape", return_value=SCRAPED
+    ):
+        result = await _ok(user_ws, "scrape", url="https://marmiton.org/autre")
+    assert result["duplicate"]["id"] == existing["id"]
+    assert result["duplicate"]["name"] == "Ma crème brûlée"
+
+
+async def test_create_refuses_a_duplicate_source_url(
+    user_ws: MockHAClientWebSocket,
+) -> None:
+    existing = await _ok(
+        user_ws, "create", name="Crème brûlée", source_url="https://marmiton.org/r"
+    )
+    response = await _call(
+        user_ws, "create", name="Copie", source_url="https://www.marmiton.org/r/"
+    )
+    assert not response["success"]
+    assert response["error"]["code"] == "duplicate_source"
+    assert response["error"]["translation_placeholders"] == {
+        "recipe_id": existing["id"],
+        "name": "Crème brûlée",
+    }
+
+
+async def test_scrape_errors(user_ws: MockHAClientWebSocket) -> None:
+    with patch(
+        "custom_components.cookbook.websocket_api.async_scrape",
+        side_effect=ScrapeError("not_a_recipe", "No recipe found on this page"),
+    ):
+        assert await _error(user_ws, "scrape", url="https://x.fr") == "not_a_recipe"
+    # Real validation, no network involved.
+    assert await _error(user_ws, "scrape", url="ftp://x.fr") == "invalid_url"
+    assert await _error(user_ws, "scrape", url="") == "invalid_format"

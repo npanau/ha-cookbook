@@ -5,6 +5,7 @@ import { sharedStyles } from "./styles";
 import type { HomeAssistant, PanelRoute } from "./types";
 import type { CookbookRecipeEditor } from "./views/recipe-editor";
 import "./views/recipe-editor";
+import "./views/recipe-import";
 import "./views/recipe-list";
 import "./views/recipe-view";
 
@@ -23,8 +24,11 @@ class CookbookPanel extends LitElement {
   /** Back arrow: editor -> recipe (or list for a new one), recipe -> list. */
   private back(view: View) {
     const target = view.name === "edit" ? recipeUrl(view.id) : listUrl();
-    const editor = this.renderRoot.querySelector<CookbookRecipeEditor>("cookbook-recipe-editor");
-    if (editor) editor.requestLeave(target);
+    // The editor (or the import view, which may contain one) can ask before leaving.
+    const guard = this.renderRoot.querySelector<HTMLElement & Pick<CookbookRecipeEditor, "requestLeave">>(
+      "cookbook-recipe-editor, cookbook-recipe-import",
+    );
+    if (guard) guard.requestLeave(target);
     else navigate(target);
   }
 
@@ -51,6 +55,8 @@ class CookbookPanel extends LitElement {
             ? html`<cookbook-recipe-view .hass=${this.hass} .recipeId=${view.id}></cookbook-recipe-view>`
             : view.name === "new"
               ? html`<cookbook-recipe-editor .hass=${this.hass}></cookbook-recipe-editor>`
+              : view.name === "import"
+                ? html`<cookbook-recipe-import .hass=${this.hass}></cookbook-recipe-import>`
               : view.name === "edit"
                 ? html`<cookbook-recipe-editor .hass=${this.hass} .recipeId=${view.id}></cookbook-recipe-editor>`
                 : html`<div class="message">

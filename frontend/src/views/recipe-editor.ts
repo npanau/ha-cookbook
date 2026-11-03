@@ -29,7 +29,7 @@ export interface EditorForm {
 
 export type FormErrors = Partial<Record<keyof EditorForm, MessageKey>>;
 
-export function formFromRecipe(recipe?: Recipe | null): EditorForm {
+export function formFromRecipe(recipe?: Partial<RecipeFields> | null): EditorForm {
   const time = (value: number | null | undefined) => (value == null ? "" : String(value));
   return {
     name: recipe?.name ?? "",
@@ -115,7 +115,10 @@ export class CookbookRecipeEditor extends LitElement {
     saving: { state: true },
     conflict: { state: true },
     leaveTarget: { state: true },
+    duplicateOf: { state: true },
     suggestions: { state: true },
+    draft: { attribute: false },
+    importedFrom: { attribute: false },
   };
 
   hass!: HomeAssistant;
@@ -130,7 +133,13 @@ export class CookbookRecipeEditor extends LitElement {
   saving = false;
   conflict: { latest: Recipe } | null = null;
   leaveTarget: string | null = null;
+  /** Recipe that already has the source URL (save refused by the server). */
+  duplicateOf: { id: string; name: string } | null = null;
   suggestions: string[] = [];
+  /** Prefilled, not yet saved recipe (URL import preview): a new recipe, dirty from the start. */
+  draft?: RecipeFields;
+  /** Site name shown in the "imported from" banner. */
+  importedFrom?: string;
 
   /** Last loaded/saved version: base of the conflict check and of the dirty state. */
   private original: Recipe | null = null;
@@ -164,9 +173,9 @@ export class CookbookRecipeEditor extends LitElement {
   }
 
   protected willUpdate(changed: Map<string, unknown>) {
-    if (changed.has("recipeId")) {
+    if (changed.has("recipeId") || changed.has("draft")) {
       if (this.recipeId) void this.load(this.recipeId);
-      else this.reset(null);
+      else this.reset(null, this.draft);
     }
   }
 
@@ -197,7 +206,8 @@ export class CookbookRecipeEditor extends LitElement {
     return this.recipeId ? recipeUrl(this.recipeId) : listUrl();
   }
 
-  private reset(recipe: Recipe | null) {
+  /** Loads a saved recipe, or an empty form / a draft for a new one. */
+  private reset(recipe: Recipe | null, draft?: RecipeFields) {
     this.original = recipe;
     this.form = formFromRecipe(recipe);
     this.ingredients = recipe ? recipe.ingredients.map((i) => ({ ...i })) : [];
@@ -205,6 +215,12 @@ export class CookbookRecipeEditor extends LitElement {
     this.errors = {};
     this.conflict = null;
     this.snapshot = JSON.stringify(this.currentFields());
+    if (draft) {
+      // Snapshot of the empty form: the draft counts as unsaved changes.
+      this.form = formFromRecipe(draft);
+      this.ingredients = draft.ingredients.map((i) => ({ ...i }));
+      this.steps = draft.steps.map((s) => ({ ...s }));
+    }
   }
 
   private async load(id: string) {
@@ -248,6 +264,7 @@ export class CookbookRecipeEditor extends LitElement {
     }
     this.saving = true;
     this.error = null;
+    this.duplicateOf = null;
     const fields = this.currentFields();
     try {
       const saved = this.original
@@ -262,7 +279,11 @@ export class CookbookRecipeEditor extends LitElement {
       this.conflict = null;
       navigate(recipeUrl(saved.id), { replace: true });
     } catch (error) {
-      if (isApiError(error) && error.code === "conflict" && this.original) {
+      const placeholders = isApiError(error) ? error.translation_placeholders : undefined;
+      if (isApiError(error) && error.code === "duplicate_source" && placeholders) {
+        this.duplicateOf = { id: placeholders.recipe_id, name: placeholders.name };
+        this.errors = { ...this.errors, source_url: "duplicate_source_field" };
+      } else if (isApiError(error) && error.code === "conflict" && this.original) {
         try {
           this.conflict = { latest: await this.api.get(this.original.id) };
         } catch (inner) {
@@ -304,7 +325,22 @@ export class CookbookRecipeEditor extends LitElement {
     const labels = this.listLabels;
     return html`
       <h1>${this.recipeId ? t("edit_recipe") : t("new_recipe")}</h1>
+      ${this.importedFrom
+        ? html`<p class="banner imported" role="status">
+            <ha-icon icon="mdi:web-check"></ha-icon>${t("imported_from", { site: this.importedFrom })}
+          </p>`
+        : nothing}
       ${this.conflict ? this.renderConflict(t) : nothing}
+      ${this.duplicateOf
+        ? html`<div class="banner duplicate" role="alert">
+            <p>${t("duplicate_source_text", { name: this.duplicateOf.name })}</p>
+            <div class="banner-actions">
+              <button class="btn open-duplicate" @click=${() => this.requestLeave(recipeUrl(this.duplicateOf!.id))}>
+                ${t("duplicate_open")}
+              </button>
+            </div>
+          </div>`
+        : nothing}
       ${this.error ? html`<p class="banner error" role="alert">${this.error}</p>` : nothing}
 
       <section class="card">
@@ -571,6 +607,16 @@ export class CookbookRecipeEditor extends LitElement {
       }
       .conflict {
         border-color: var(--warning-color, #ffa600);
+      }
+      .imported {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-color: var(--primary-color);
+        --mdc-icon-size: 20px;
+      }
+      .imported ha-icon {
+        color: var(--primary-color);
       }
       .banner-actions {
         display: flex;

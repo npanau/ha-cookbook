@@ -1,0 +1,25 @@
+[project]
+name = "ha-cookbook"
+version = "0.1.0"
+description = "Recipe manager integration for Home Assistant"
+requires-python = ">=3.14.2"
+
+[dependency-groups]
+dev = [
+  "pytest-homeassistant-custom-component==0.13.375",
+  "home-assistant-frontend==20260930.5",
+  "ruff",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

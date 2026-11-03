@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+
+# Node
+node_modules/
+
+# HA dev instance: only configuration.yaml is versioned
+dev/config/*
+!dev/config/configuration.yaml
+
+# OS / IDE
+.DS_Store
+.idea/
+custom_components/cookbook/frontend/*.map
+
+# Personal working plan (kept in Claude Desktop, local copy only)
+docs/PLAN.md

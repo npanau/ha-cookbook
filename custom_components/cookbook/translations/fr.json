@@ -1,0 +1,12 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Ajouter le gestionnaire de recettes Cookbook à Home Assistant ? Un panneau « Cookbook » apparaîtra dans la barre latérale."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Déjà configuré. Une seule configuration possible."
+    }
+  }
+}

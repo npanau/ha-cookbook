@@ -1,0 +1,29 @@
+# Local development environment — NEVER used for production (Pi 5).
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:${HA_VERSION:-2026.10.4}
+    container_name: cookbook-ha
+    restart: unless-stopped
+    ports:
+      - "8123:8123"
+    environment:
+      TZ: Europe/Paris
+    volumes:
+      - ./dev/config:/config
+      - ./custom_components/cookbook:/config/custom_components/cookbook
+
+  # Optional: rebuilds the panel bundle on every change.
+  # Alternative without Docker: `cd frontend && npm run watch`.
+  frontend:
+    image: node:24-alpine
+    container_name: cookbook-frontend
+    working_dir: /app/frontend
+    command: sh -c "npm ci && npm run watch"
+    volumes:
+      - ./frontend:/app/frontend
+      - ./custom_components/cookbook/frontend:/app/custom_components/cookbook/frontend
+      - frontend_node_modules:/app/frontend/node_modules
+    profiles: ["frontend"]
+
+volumes:
+  frontend_node_modules:

@@ -1,0 +1,7 @@
+# Home Assistant DEV instance (Docker) — never point this at production.
+default_config:
+
+logger:
+  default: info
+  logs:
+    custom_components.cookbook: debug

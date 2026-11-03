@@ -10,7 +10,7 @@
   "prep_time": "Prep",
   "cook_time": "Cook",
   "total_time": "Total",
-  "servings": "Servings",
+  "servings": "Serves",
   "ingredients": "Ingredients",
   "steps": "Steps",
   "notes": "Notes",
@@ -45,7 +45,6 @@
   "remove_category": "Remove {name}",
   "times": "Times (minutes)",
   "total_auto": "auto: {value}",
-  "servings_placeholder": "e.g. 4 people",
   "ingredient_placeholder": "e.g. 200 g flour",
   "step_placeholder": "Describe the step",
   "section_placeholder": "Section name (e.g. Dough)",
@@ -66,5 +65,13 @@
   "conflict_overwrite": "Overwrite with my changes",
   "leave_title": "Leave without saving?",
   "leave_text": "Your changes will be lost.",
-  "leave_confirm": "Leave"
+  "leave_confirm": "Leave",
+  "servings_unit": "Unit",
+  "servings_unit_default": "people",
+  "servings_unit_suggestions": "people,servings,pieces,portions,ramekins",
+  "servings_invalid": "Enter a whole number between 1 and 1000.",
+  "fewer_servings": "One less",
+  "more_servings": "One more",
+  "scaled_notice": "Quantities adapted for {count} {unit} (recipe for {original})",
+  "scaled_reset": "Back to {original}"
 }

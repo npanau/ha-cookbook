@@ -22,6 +22,7 @@ export interface EditorForm {
   cook_time: string;
   total_time: string;
   servings: string;
+  servings_unit: string;
   notes: string;
   source_url: string;
 }
@@ -37,7 +38,8 @@ export function formFromRecipe(recipe?: Recipe | null): EditorForm {
     prep_time: time(recipe?.prep_time),
     cook_time: time(recipe?.cook_time),
     total_time: time(recipe?.total_time),
-    servings: recipe?.servings ?? "",
+    servings: recipe?.servings == null ? "" : String(recipe.servings),
+    servings_unit: recipe?.servings_unit ?? "",
     notes: recipe?.notes ?? "",
     source_url: recipe?.source_url ?? "",
   };
@@ -50,9 +52,18 @@ export function parseMinutes(value: string): number | null | undefined {
   return /^\d{1,5}$/.test(text) ? Number(text) : undefined;
 }
 
+/** "" -> null, "4" -> 4, anything else (0, 2.5, "4 pers.") -> undefined (invalid). */
+export function parseServings(value: string): number | null | undefined {
+  const text = value.trim();
+  if (!text) return null;
+  const count = /^\d{1,4}$/.test(text) ? Number(text) : NaN;
+  return count >= 1 && count <= 1000 ? count : undefined;
+}
+
 export function validate(form: EditorForm): FormErrors {
   const errors: FormErrors = {};
   if (!form.name.trim()) errors.name = "name_required";
+  if (parseServings(form.servings) === undefined) errors.servings = "servings_invalid";
   for (const field of TIME_FIELDS) {
     if (parseMinutes(form[field]) === undefined) errors[field] = "minutes_invalid";
   }
@@ -61,9 +72,18 @@ export function validate(form: EditorForm): FormErrors {
   return errors;
 }
 
-/** Form + lists -> payload of cookbook/create / cookbook/update (call after validate). */
-export function toFields(form: EditorForm, ingredients: RecipeItem[], steps: RecipeItem[]): RecipeFields {
+/**
+ * Form + lists -> payload of cookbook/create / cookbook/update (call after validate).
+ * A number of servings without unit gets `defaultUnit` ("personnes").
+ */
+export function toFields(
+  form: EditorForm,
+  ingredients: RecipeItem[],
+  steps: RecipeItem[],
+  defaultUnit: string | null = null,
+): RecipeFields {
   const text = (value: string) => value.trim() || null;
+  const servings = parseServings(form.servings) ?? null;
   return {
     name: form.name.trim(),
     description: text(form.description),
@@ -71,7 +91,8 @@ export function toFields(form: EditorForm, ingredients: RecipeItem[], steps: Rec
     prep_time: parseMinutes(form.prep_time) ?? null,
     cook_time: parseMinutes(form.cook_time) ?? null,
     total_time: parseMinutes(form.total_time) ?? null,
-    servings: text(form.servings),
+    servings,
+    servings_unit: text(form.servings_unit) ?? (servings ? defaultUnit : null),
     ingredients,
     steps,
     notes: text(form.notes),
@@ -158,7 +179,7 @@ export class CookbookRecipeEditor extends LitElement {
   }
 
   private currentFields(): RecipeFields {
-    return toFields(this.form, this.ingredients, this.steps);
+    return toFields(this.form, this.ingredients, this.steps, this.t("servings_unit_default"));
   }
 
   /** True when the form differs from the last loaded/saved version. */
@@ -301,7 +322,7 @@ export class CookbookRecipeEditor extends LitElement {
         </label>
         <div class="times">
           ${TIME_FIELDS.map((field) => this.renderTime(field, t))}
-          ${this.renderText("servings", t("servings"), { placeholder: t("servings_placeholder") })}
+          ${this.renderServings(t)}
         </div>
       </section>
 
@@ -373,7 +394,7 @@ export class CookbookRecipeEditor extends LitElement {
   }
 
   private renderText(
-    field: "name" | "description" | "servings" | "notes" | "source_url",
+    field: "name" | "description" | "notes" | "source_url",
     label: string,
     options: { multiline?: boolean; required?: boolean; autofocus?: boolean; placeholder?: string; type?: string } = {},
   ) {
@@ -400,6 +421,35 @@ export class CookbookRecipeEditor extends LitElement {
           />`}
       ${error ? html`<span class="field-error">${this.t(error)}</span>` : nothing}
     </label>`;
+  }
+
+  /** "Pour [4] [personnes]": number (enables scaling) and free unit with suggestions. */
+  private renderServings(t: Localize) {
+    const error = this.errors.servings;
+    const suggestions = t("servings_unit_suggestions").split(",");
+    return html`<div class="field servings">
+      <span class="label">${t("servings")}</span>
+      <div class="servings-inputs">
+        <input
+          name="servings"
+          inputmode="numeric"
+          aria-label=${t("servings")}
+          .value=${this.form.servings}
+          aria-invalid=${error ? "true" : "false"}
+          @input=${(e: Event) => this.setField("servings", (e.target as HTMLInputElement).value)}
+        />
+        <input
+          name="servings_unit"
+          list="servings-units"
+          aria-label=${t("servings_unit")}
+          placeholder=${t("servings_unit_default")}
+          .value=${this.form.servings_unit}
+          @input=${(e: Event) => this.setField("servings_unit", (e.target as HTMLInputElement).value)}
+        />
+        <datalist id="servings-units">${suggestions.map((u) => html`<option value=${u}></option>`)}</datalist>
+      </div>
+      ${error ? html`<span class="field-error">${t(error)}</span>` : nothing}
+    </div>`;
   }
 
   private renderTime(field: TimeField, t: Localize) {
@@ -460,8 +510,21 @@ export class CookbookRecipeEditor extends LitElement {
         font-size: 13px;
         color: var(--secondary-text-color);
       }
+      .servings-inputs {
+        display: flex;
+        gap: 6px;
+      }
+      .servings-inputs input:first-child {
+        width: 4.5em;
+        flex: none;
+      }
+      .servings-inputs input:not(:first-child) {
+        flex: 1;
+        min-width: 0;
+      }
       .field > input,
-      .field > textarea {
+      .field > textarea,
+      .servings-inputs input {
         box-sizing: border-box;
         width: 100%;
         padding: 9px 10px;
@@ -476,7 +539,8 @@ export class CookbookRecipeEditor extends LitElement {
         resize: vertical;
       }
       .field > input:focus,
-      .field > textarea:focus {
+      .field > textarea:focus,
+      .servings-inputs input:focus {
         outline: 2px solid var(--primary-color);
         outline-offset: -1px;
       }

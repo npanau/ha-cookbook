@@ -1,14 +1,16 @@
 import { LitElement, css, html, nothing } from "lit";
 import { CookbookApi, isApiError } from "../api";
 import "../components/confirm-dialog";
-import { formatDate, formatDuration, groupBySection, totalTime } from "../format";
+import { formatDate, formatDuration, formatServings, groupBySection, totalTime } from "../format";
 import { type Localize, getLanguage, getLocalize } from "../i18n";
 import { printRecipe } from "../print";
+import { scaleLine } from "../quantity";
 import { editUrl, listUrl, navigate } from "../router";
 import { sharedStyles } from "../styles";
 import type { HomeAssistant, Recipe, RecipeItem } from "../types";
 
 const LARGE_TEXT_KEY = "cookbook:large-text";
+const MAX_SERVINGS = 1000;
 const checksKey = (id: string) => `cookbook:checks:${id}`;
 
 // localStorage may be unavailable (private mode, blocked storage): never fail because of it.
@@ -41,11 +43,14 @@ export class CookbookRecipeView extends LitElement {
     largeText: { type: Boolean, reflect: true, attribute: "large-text" },
     awake: { state: true },
     confirmDelete: { state: true },
+    servings: { state: true },
   };
 
   hass!: HomeAssistant;
   recipeId = "";
   recipe: Recipe | null = null;
+  /** Number of people the quantities are displayed for (null: recipe without a number). */
+  servings: number | null = null;
   error: string | null = null;
   notFound = false;
   /** Keys "i<index>" (ingredient) and "s<index>" (step), stored per device. */
@@ -84,7 +89,13 @@ export class CookbookRecipeView extends LitElement {
     this.checked = new Set(JSON.parse(readStorage(checksKey(id)) ?? "[]") as string[]);
     try {
       const recipe = await new CookbookApi(this.hass).get(id);
-      if (id === this.recipeId) this.recipe = recipe;
+      if (id !== this.recipeId) return;
+      this.recipe = recipe;
+      // ?parts=6 keeps the chosen number on reload; a new visit starts from the recipe's.
+      const parts = Number(new URLSearchParams(location.search).get("parts"));
+      this.servings = recipe.servings && Number.isInteger(parts) && parts >= 1 && parts <= MAX_SERVINGS
+        ? parts
+        : recipe.servings;
     } catch (error) {
       if (id !== this.recipeId) return;
       if (isApiError(error) && error.code === "not_found") {
@@ -94,6 +105,22 @@ export class CookbookRecipeView extends LitElement {
         this.error = getLocalize(this.hass)("error", { message });
       }
     }
+  }
+
+  private get factor(): number {
+    const original = this.recipe?.servings;
+    return original && this.servings ? this.servings / original : 1;
+  }
+
+  private setServings(value: number) {
+    const original = this.recipe?.servings;
+    if (!original) return;
+    this.servings = Math.min(MAX_SERVINGS, Math.max(1, value));
+    const params = new URLSearchParams(location.search);
+    if (this.servings === original) params.delete("parts");
+    else params.set("parts", String(this.servings));
+    const search = params.size ? `?${params}` : "";
+    history.replaceState(history.state, "", `${location.pathname}${search}`);
   }
 
   private toggleCheck(key: string) {
@@ -170,7 +197,6 @@ export class CookbookRecipeView extends LitElement {
       { key: "prep_time", icon: "mdi:knife", value: formatDuration(recipe.prep_time, t) },
       { key: "cook_time", icon: "mdi:pot-steam-outline", value: formatDuration(recipe.cook_time, t) },
       { key: "total_time", icon: "mdi:clock-outline", value: formatDuration(totalTime(recipe), t) },
-      { key: "servings", icon: "mdi:account-group-outline", value: recipe.servings ?? "" },
     ] as const;
     const updated = formatDate(recipe.updated_at, language);
     return html`
@@ -192,7 +218,7 @@ export class CookbookRecipeView extends LitElement {
         <button class="btn primary edit" @click=${() => navigate(editUrl(recipe.id))}>
           <ha-icon icon="mdi:pencil"></ha-icon>${t("edit")}
         </button>
-        <button class="btn print" @click=${() => printRecipe(recipe, t, language)}>
+        <button class="btn print" @click=${() => printRecipe(recipe, t, language, this.servings)}>
           <ha-icon icon="mdi:printer"></ha-icon>${t("print")}
         </button>
         ${this.hass.user?.is_admin
@@ -216,6 +242,7 @@ export class CookbookRecipeView extends LitElement {
                 <div><div class="muted label">${t(m.key)}</div><div>${m.value}</div></div>
               </div>`,
             )}
+          ${this.renderServings(recipe, t)}
         </div>
         ${recipe.description ? html`<p class="text description">${recipe.description}</p>` : nothing}
 
@@ -223,13 +250,13 @@ export class CookbookRecipeView extends LitElement {
           ${recipe.ingredients.length
             ? html`<section class="ingredients">
                 <h2>${t("ingredients")}</h2>
-                ${this.renderItems(recipe.ingredients, "i")}
+                ${this.renderItems(recipe.ingredients, "i", language)}
               </section>`
             : nothing}
           ${recipe.steps.length
             ? html`<section class="steps">
                 <h2>${t("steps")}</h2>
-                ${this.renderItems(recipe.steps, "s")}
+                ${this.renderItems(recipe.steps, "s", language)}
               </section>`
             : nothing}
         </div>
@@ -265,7 +292,60 @@ export class CookbookRecipeView extends LitElement {
   }
 
   /** Items keep their global index (stable check keys); steps are numbered across sections. */
-  private renderItems(items: RecipeItem[], prefix: "i" | "s") {
+  /** Servings with −/+ when the recipe has a number; just the unit otherwise. */
+  private renderServings(recipe: Recipe, t: Localize) {
+    if (!recipe.servings) {
+      return recipe.servings_unit
+        ? html`<div class="meta-item">
+            <ha-icon icon="mdi:account-group-outline"></ha-icon>
+            <div><div class="muted label">${t("servings")}</div><div>${recipe.servings_unit}</div></div>
+          </div>`
+        : nothing;
+    }
+    const count = this.servings ?? recipe.servings;
+    return html`<div class="meta-item servings">
+      <ha-icon icon="mdi:account-group-outline"></ha-icon>
+      <div>
+        <div class="muted label">${t("servings")}</div>
+        <div class="stepper">
+          <button
+            class="step fewer"
+            aria-label=${t("fewer_servings")}
+            ?disabled=${count <= 1}
+            @click=${() => this.setServings((this.servings ?? recipe.servings!) - 1)}
+          >
+            <ha-icon icon="mdi:minus"></ha-icon>
+          </button>
+          <span class="count" aria-live="polite">${formatServings(count, recipe.servings_unit)}</span>
+          <button class="step more" aria-label=${t("more_servings")} @click=${() => this.setServings((this.servings ?? recipe.servings!) + 1)}>
+            <ha-icon icon="mdi:plus"></ha-icon>
+          </button>
+          ${count !== recipe.servings
+            ? html`<button
+                  class="step reset-servings"
+                  aria-label=${t("scaled_reset", { original: recipe.servings })}
+                  title=${t("scaled_reset", { original: recipe.servings })}
+                  @click=${() => this.setServings(recipe.servings!)}
+                >
+                  <ha-icon icon="mdi:restore"></ha-icon>
+                </button>
+                <span class="visually-hidden" role="status">
+                  ${t("scaled_notice", { count, unit: recipe.servings_unit ?? "", original: recipe.servings })}
+                </span>`
+            : nothing}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /** Ingredient text, with the scaled quantity highlighted when servings changed. */
+  private renderIngredientText(text: string, language: string) {
+    const scaled = this.factor !== 1 ? scaleLine(text, this.factor, language) : null;
+    if (!scaled) return text;
+    return html`${scaled.indent}<strong class="scaled">${scaled.quantity}</strong>${scaled.rest}`;
+  }
+
+  private renderItems(items: RecipeItem[], prefix: "i" | "s", language: string) {
     let index = 0;
     return groupBySection(items).map(
       (group) => html`
@@ -278,7 +358,9 @@ export class CookbookRecipeView extends LitElement {
               <label class=${done ? "done" : ""}>
                 <input type="checkbox" .checked=${done} @change=${() => this.toggleCheck(key)} />
                 ${prefix === "s" ? html`<span class="number">${index}</span>` : nothing}
-                <span class="item-text">${item.text}</span>
+                <span class="item-text"
+                  >${prefix === "i" ? this.renderIngredientText(item.text, language) : item.text}</span
+                >
               </label>
             </li>`;
           })}
@@ -402,6 +484,37 @@ export class CookbookRecipeView extends LitElement {
         min-width: 1.6em;
         font-weight: 500;
         color: var(--primary-color);
+      }
+      .stepper {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .step {
+        display: inline-flex;
+        padding: 2px;
+        border: 1px solid var(--divider-color);
+        border-radius: 50%;
+        background: var(--card-background-color);
+        color: var(--primary-color);
+        cursor: pointer;
+        --mdc-icon-size: 18px;
+      }
+      .step[disabled] {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .count {
+        min-width: 6em;
+        text-align: center;
+      }
+      .scaled {
+        color: var(--primary-color);
+        font-weight: 600;
+      }
+      .reset-servings {
+        margin-left: 4px;
+        border-color: transparent;
       }
       .done .item-text,
       .done .number {

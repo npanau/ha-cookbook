@@ -70,6 +70,9 @@ async def test_matched_ingredients_are_limited(
         {"prep_time": -1},
         {"prep_time": True},
         {"prep_time": "10"},
+        {"servings": 0},
+        {"servings": "4 personnes"},
+        {"servings": 2.5},
         {"source_url": "javascript:alert(1)"},
         {"ingredients": [{"section": "x"}]},
         {"id": "forced"},
@@ -83,7 +86,9 @@ def test_schema_rejects_invalid_fields(fields: dict[str, Any]) -> None:
 
 async def test_create_get_update_delete(hass: HomeAssistant, hass_storage) -> None:
     store = await _store(hass)
-    recipe = await store.async_create({"name": "Quiche", "servings": "4"}, "user-1")
+    recipe = await store.async_create(
+        {"name": "Quiche", "servings": 4, "servings_unit": "parts"}, "user-1"
+    )
 
     assert recipe["id"]
     assert recipe["name"] == "Quiche"
@@ -94,7 +99,8 @@ async def test_create_get_update_delete(hass: HomeAssistant, hass_storage) -> No
 
     updated = await store.async_update(recipe["id"], {"notes": "Bonne"}, "user-2")
     assert updated["notes"] == "Bonne"
-    assert updated["servings"] == "4"  # partial update keeps the other fields
+    assert updated["servings"] == 4  # partial update keeps the other fields
+    assert updated["servings_unit"] == "parts"
     assert updated["created_by"] == "user-1"
     assert updated["updated_by"] == "user-2"
     assert updated["updated_at"] > recipe["updated_at"]

@@ -31,9 +31,9 @@ describe("recipe view", () => {
     const el = await view(setup().hass);
     expect($(el, "h1")!.textContent).toBe("Crème brûlée");
     const meta = $$(el, ".meta-item").map((item) =>
-      `${item.querySelector(".label")!.textContent} ${item.querySelector(".label")!.nextElementSibling!.textContent}`,
+      `${item.querySelector(".label")!.textContent} ${item.querySelector(".label")!.nextElementSibling!.textContent!.replace(/\s+/g, " ").trim()}`,
     );
-    expect(meta).toEqual(["Préparation 20 min", "Cuisson 40 min", "Total 1 h", "Parts 4 personnes"]);
+    expect(meta).toEqual(["Préparation 20 min", "Cuisson 40 min", "Total 1 h", "Pour 4 personnes"]);
     expect($$(el, ".ingredients .item-text").map((e) => e.textContent)).toEqual([
       "4 jaunes d'œufs",
       "50 cl de crème",
@@ -138,6 +138,71 @@ describe("recipe view", () => {
     const spy = vi.spyOn(print, "printRecipe").mockImplementation(() => undefined);
     const el = await view(setup().hass);
     $<HTMLButtonElement>(el, ".print")!.click();
-    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ id: "r1" }), expect.any(Function), "fr");
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ id: "r1" }), expect.any(Function), "fr", 4);
+  });
+
+  it("adapts the quantities to the number of servings", async () => {
+    const recipe = makeRecipe({
+      ingredients: [
+        { text: "200 g de farine", section: null },
+        { text: "3 œufs", section: null },
+        { text: "Sel", section: null },
+      ],
+    });
+    const { hass } = mockHass({ "cookbook/get": () => recipe });
+    const el = await view(hass);
+    const texts = () => $$(el, ".ingredients .item-text").map((e) => e.textContent!.trim());
+    expect($(el, ".reset-servings")).toBeNull();
+    expect($(el, ".fewer")!.hasAttribute("disabled")).toBe(false);
+
+    $<HTMLButtonElement>(el, ".more")!.click();
+    $<HTMLButtonElement>(el, ".more")!.click();
+    await settle(el);
+    expect($(el, ".count")!.textContent).toBe("6 personnes");
+    expect(texts()).toEqual(["300 g de farine", "4½ œufs", "Sel"]);
+    expect($$(el, ".scaled").map((e) => e.textContent)).toEqual(["300", "4½"]);
+    // Small reset icon next to the stepper; the notice is for screen readers only.
+    expect($(el, ".reset-servings")!.getAttribute("aria-label")).toBe("Revenir à 4");
+    const status = $(el, '[role="status"]')!;
+    expect(status.classList.contains("visually-hidden")).toBe(true);
+    expect(status.textContent).toContain("Quantités adaptées pour 6 personnes (recette pour 4)");
+    expect(location.search).toBe("?parts=6");
+    // Steps are never scaled.
+    expect($$(el, ".steps .item-text").map((e) => e.textContent!.trim())).toEqual(["Mélanger", "Cuire"]);
+
+    $<HTMLButtonElement>(el, ".reset-servings")!.click();
+    await settle(el);
+    expect(texts()).toEqual(["200 g de farine", "3 œufs", "Sel"]);
+    expect($(el, ".scaled")).toBeNull();
+    expect($(el, ".reset-servings")).toBeNull();
+    expect(location.search).toBe("");
+  });
+
+  it("keeps the chosen number on reload and prints it", async () => {
+    history.replaceState(null, "", "/cookbook/recipe/r1?parts=2");
+    const spy = vi.spyOn(print, "printRecipe").mockImplementation(() => undefined);
+    const el = await view(setup().hass);
+    expect($(el, ".count")!.textContent).toBe("2 personnes");
+    $<HTMLButtonElement>(el, ".print")!.click();
+    expect(spy).toHaveBeenCalledWith(expect.anything(), expect.any(Function), "fr", 2);
+  });
+
+  it("ignores an invalid number in the URL", async () => {
+    history.replaceState(null, "", "/cookbook/recipe/r1?parts=abc");
+    const el = await view(setup().hass);
+    expect($(el, ".count")!.textContent).toBe("4 personnes");
+  });
+
+  it("does not go below one", async () => {
+    history.replaceState(null, "", "/cookbook/recipe/r1?parts=1");
+    const el = await view(setup().hass);
+    expect($(el, ".fewer")!.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("has no stepper for a recipe without a number of servings", async () => {
+    const { hass } = mockHass({ "cookbook/get": () => makeRecipe({ servings: null, servings_unit: "1 grand plat" }) });
+    const el = await view(hass);
+    expect($(el, ".stepper")).toBeNull();
+    expect($(el, ".meta")!.textContent).toContain("1 grand plat");
   });
 });

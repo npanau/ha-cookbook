@@ -37,3 +37,8 @@ export function groupBySection<T extends { section: string | null }>(
   }
   return groups;
 }
+
+/** "4 personnes", "6 ramequins", or just the unit / nothing when there is no number. */
+export function formatServings(count: number | null, unit: string | null): string {
+  return [count, unit].filter((part) => part !== null && part !== "").join(" ");
+}

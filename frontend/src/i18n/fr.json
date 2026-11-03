@@ -10,7 +10,7 @@
   "prep_time": "Préparation",
   "cook_time": "Cuisson",
   "total_time": "Total",
-  "servings": "Parts",
+  "servings": "Pour",
   "ingredients": "Ingrédients",
   "steps": "Étapes",
   "notes": "Notes",
@@ -45,7 +45,6 @@
   "remove_category": "Retirer {name}",
   "times": "Temps (minutes)",
   "total_auto": "auto : {value}",
-  "servings_placeholder": "ex. 4 personnes",
   "ingredient_placeholder": "ex. 200 g de farine",
   "step_placeholder": "Décrivez l'étape",
   "section_placeholder": "Nom de la section (ex. Pâte)",
@@ -66,5 +65,13 @@
   "conflict_overwrite": "Écraser avec mes modifications",
   "leave_title": "Quitter sans enregistrer ?",
   "leave_text": "Vos modifications seront perdues.",
-  "leave_confirm": "Quitter"
+  "leave_confirm": "Quitter",
+  "servings_unit": "Unité",
+  "servings_unit_default": "personnes",
+  "servings_unit_suggestions": "personnes,parts,pièces,portions,ramequins,verrines",
+  "servings_invalid": "Indiquez un nombre entier entre 1 et 1000.",
+  "fewer_servings": "Une de moins",
+  "more_servings": "Une de plus",
+  "scaled_notice": "Quantités adaptées pour {count} {unit} (recette pour {original})",
+  "scaled_reset": "Revenir à {original}"
 }

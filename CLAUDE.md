@@ -21,8 +21,11 @@ Nicolas déclenche lui-même : ne jamais s'y connecter, y copier des fichiers ou
     accents ni ligatures œ/æ) pour comparer catégories et recherche. `id`, dates, auteurs et `image` sont gérés par
     le serveur, jamais acceptés du client.
   - `store.py` : `helpers.storage.Store` (`.storage/cookbook`, version 1.1, `{"recipes": {id: recipe}}`), en mémoire,
-    écrit à chaque modification. **Toute évolution du schéma** : incrémenter la version et ajouter la migration dans
-    `_CookbookStorage._async_migrate_func`, avec un test. Le store renvoie toujours des copies.
+    écrit à chaque modification. Le store renvoie toujours des copies.
+  - **Migrations** : tant qu'aucune version n'est déployée (ni prod, ni release HACS), on modifie le schéma 1.1 en
+    place et on régénère les données de dev (`make seed`). **À partir de la première version déployée**, toute
+    évolution du schéma incrémente la version et ajoute sa migration dans `_CookbookStorage._async_migrate_func`,
+    avec un test.
   - `websocket_api.py` : `cookbook/list|get|create|update|delete|search|categories`. `update` est **partiel** et
     accepte `expected_updated_at` (erreur `conflict` si la recette a changé). Erreurs : `not_found`, `unauthorized`,
     `conflict`, `not_loaded`, `invalid_format`.
@@ -40,6 +43,12 @@ Nicolas déclenche lui-même : ne jamais s'y connecter, y copier des fichiers ou
 - **Droits** : tout utilisateur peut lire / créer / modifier / importer ; **suppression réservée aux admins**
   (décorateur `@websocket_api.require_admin`). Chaque recette garde `created_by` / `updated_by` (id utilisateur HA) ;
   `get` / `create` / `update` ajoutent `created_by_name` / `updated_by_name`, résolus à la lecture.
+- **Nombre de personnes et quantités** : `servings` (entier, facultatif) + `servings_unit` (texte libre,
+  « personnes » par défaut côté éditeur). Les ingrédients restent du **texte libre** ; l'adaptation se fait à
+  l'affichage (`frontend/src/quantity.ts`) : seule la quantité **en chiffres ou fractions en début de ligne** est
+  adaptée (« une pincée », « Sel » et le reste de la ligne ne changent pas) ; décimales pour g/kg/ml/cl/l, fractions
+  ½ ¼ ¾ ⅓ ⅔ pour le reste. Les étapes et notes ne sont jamais adaptées. Nombre choisi dans l'URL (`?parts=6`), repris
+  par l'impression.
 - **i18n** : FR + EN. Backend : `strings.json` + `translations/{en,fr}.json` (garder les trois synchronisés).
   Frontend : `frontend/src/i18n/{en,fr}.json`, langue de l'utilisateur via `hass.locale.language`.
   Le titre du panneau reste « Cookbook » dans toutes les langues.
@@ -52,6 +61,7 @@ custom_components/cookbook/   # l'intégration (montée dans le HA de dev)
 frontend/                     # sources Lit/TS + Vite
 tests/                        # pytest-homeassistant-custom-component
 dev/config/                   # config du HA de dev (seul configuration.yaml est versionné)
+dev/fixtures/, dev/seed.py    # recettes de démonstration et `make seed`
 .github/workflows/            # hassfest, validation HACS, tests (Python, frontend + bundle à jour, E2E)
 ```
 
@@ -68,6 +78,7 @@ dev/config/                   # config du HA de dev (seul configuration.yaml est
 | `make typecheck` | `tsc --noEmit` sur le frontend |
 | `make e2e` | Tests E2E Playwright (desktop + mobile) sur un HA jetable ; filtres `GREP="CB03"`, `PROJECT=mobile` |
 | `make e2e-headed` | Idem, navigateur visible |
+| `make seed` | Remplace les recettes du HA de **dev** par `dev/fixtures/recipes.json` (validées par le schéma, et par `tests/test_fixtures.py`) |
 | `make build` | Bundle de production : **à lancer avant chaque commit touchant `frontend/`** (la CI vérifie que le bundle commité est à jour ; le watch produit un bundle de dev non minifié) |
 
 Modification TypeScript : le watch reconstruit, il suffit de recharger la page (le statique est servi sans cache).

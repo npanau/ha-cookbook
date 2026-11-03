@@ -32,7 +32,8 @@ export interface RecipeSummary {
 
 export interface Recipe extends RecipeSummary {
   description: string | null;
-  servings: string | null;
+  servings: number | null;
+  servings_unit: string | null;
   ingredients: RecipeItem[];
   steps: RecipeItem[];
   notes: string | null;
@@ -57,7 +58,9 @@ export interface RecipeFields {
   prep_time: number | null;
   cook_time: number | null;
   total_time: number | null;
-  servings: string | null;
+  /** Number of people/parts the quantities are for; enables scaling. */
+  servings: number | null;
+  servings_unit: string | null;
   ingredients: RecipeItem[];
   steps: RecipeItem[];
   notes: string | null;

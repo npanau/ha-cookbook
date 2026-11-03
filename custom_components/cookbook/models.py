@@ -15,6 +15,7 @@ MAX_ITEMS = 500
 MAX_CATEGORIES = 50
 MAX_URL = 2_000
 MAX_MINUTES = 100_000
+MAX_SERVINGS = 1_000
 
 # Fields a client may send; id, dates, authors and image are server-managed.
 EDITABLE_FIELDS = (
@@ -25,6 +26,7 @@ EDITABLE_FIELDS = (
     "cook_time",
     "total_time",
     "servings",
+    "servings_unit",
     "ingredients",
     "steps",
     "notes",
@@ -38,6 +40,7 @@ DEFAULT_RECIPE: dict[str, Any] = {
     "cook_time": None,
     "total_time": None,
     "servings": None,
+    "servings_unit": None,
     "ingredients": [],
     "steps": [],
     "notes": None,
@@ -111,7 +114,7 @@ ITEMS = vol.All(
 def _strict_int(value: Any) -> int:
     # bool is a subclass of int in Python: reject it explicitly.
     if isinstance(value, bool) or not isinstance(value, int):
-        raise vol.Invalid("expected an integer number of minutes")
+        raise vol.Invalid("expected an integer")
     return value
 
 
@@ -129,7 +132,9 @@ FIELD_VALIDATORS: dict[str, Any] = {
     "prep_time": MINUTES,
     "cook_time": MINUTES,
     "total_time": MINUTES,
-    "servings": _optional_text(MAX_SHORT_TEXT),
+    # Number of people/parts the quantities are for (enables scaling), and its unit.
+    "servings": vol.Any(None, vol.All(_strict_int, vol.Range(min=1, max=MAX_SERVINGS))),
+    "servings_unit": _optional_text(MAX_SHORT_TEXT),
     "ingredients": ITEMS,
     "steps": ITEMS,
     "notes": _optional_text(MAX_TEXT),

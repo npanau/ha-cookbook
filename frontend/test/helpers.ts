@@ -35,7 +35,8 @@ export function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
     prep_time: 20,
     cook_time: 40,
     total_time: null,
-    servings: "4 personnes",
+    servings: 4,
+    servings_unit: "personnes",
     ingredients: [
       { text: "4 jaunes d'œufs", section: null },
       { text: "50 cl de crème", section: null },

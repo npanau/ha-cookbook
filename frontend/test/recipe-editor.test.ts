@@ -5,6 +5,7 @@ import {
   type CookbookRecipeEditor,
   formFromRecipe,
   parseMinutes,
+  parseServings,
   toFields,
   validate,
 } from "../src/views/recipe-editor";
@@ -58,6 +59,7 @@ describe("editor form helpers", () => {
       cook_time: null,
       total_time: null,
       servings: null,
+      servings_unit: null,
       ingredients: [],
       steps: [],
       notes: "Bon",
@@ -65,10 +67,31 @@ describe("editor form helpers", () => {
     });
   });
 
+  it("validates and converts the number of servings", () => {
+    expect(parseServings("")).toBeNull();
+    expect(parseServings(" 6 ")).toBe(6);
+    for (const invalid of ["0", "2.5", "4 pers", "1001"]) expect(parseServings(invalid)).toBeUndefined();
+    expect(validate({ ...formFromRecipe(), name: "x", servings: "deux" })).toEqual({ servings: "servings_invalid" });
+  });
+
+  it("gives a default unit to a number of servings", () => {
+    const form = { ...formFromRecipe(), name: "x", servings: "4" };
+    expect(toFields(form, [], [], "personnes")).toMatchObject({ servings: 4, servings_unit: "personnes" });
+    expect(toFields({ ...form, servings_unit: "ramequins" }, [], [], "personnes").servings_unit).toBe("ramequins");
+    expect(toFields({ ...form, servings: "" }, [], [], "personnes")).toMatchObject({ servings: null, servings_unit: null });
+  });
+
   it("round-trips a recipe", () => {
     const recipe = makeRecipe();
     const fields = toFields(formFromRecipe(recipe), recipe.ingredients, recipe.steps);
-    expect(fields).toMatchObject({ name: recipe.name, prep_time: 20, total_time: null, notes: null });
+    expect(fields).toMatchObject({
+      name: recipe.name,
+      prep_time: 20,
+      total_time: null,
+      notes: null,
+      servings: 4,
+      servings_unit: "personnes",
+    });
   });
 });
 
@@ -105,6 +128,7 @@ describe("recipe editor", () => {
       cook_time: 35,
       total_time: null,
       servings: null,
+      servings_unit: null,
       ingredients: [{ text: "4 pommes", section: null }],
       steps: [{ text: "Cuire", section: null }],
       notes: null,
@@ -253,6 +277,21 @@ describe("recipe editor", () => {
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true, cancelable: true }));
     await settle(el);
     expect(callWS).toHaveBeenCalledWith(expect.objectContaining({ type: "cookbook/create", name: "Raccourci" }));
+  });
+
+  it("sends servings with the default unit", async () => {
+    const { hass, callWS } = mockHass({
+      "cookbook/categories": categories,
+      "cookbook/create": () => makeRecipe({ id: "s" }),
+    });
+    const el = await mount<CookbookRecipeEditor>("cookbook-recipe-editor", { hass });
+    type(el, "name", "Tarte");
+    type(el, "servings", "8");
+    save(el);
+    await settle(el);
+    expect(callWS).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "cookbook/create", servings: 8, servings_unit: "personnes" }),
+    );
   });
 
   it("passes existing categories as suggestions", async () => {

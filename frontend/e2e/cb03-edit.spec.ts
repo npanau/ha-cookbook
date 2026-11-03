@@ -2,7 +2,7 @@ import { expect, test } from "./fixtures";
 
 test("CB03 : modifier une recette", async ({ cookbook, uid }) => {
   await cookbook.goto();
-  const recipe = await cookbook.createRecipe({ name: `Gratin ${uid}`, servings: "4 personnes" });
+  const recipe = await cookbook.createRecipe({ name: `Gratin ${uid}`, servings: 4, servings_unit: "personnes" });
   await cookbook.goto(`/recipe/${recipe.id}`);
   await cookbook.sheet().getByRole("button", { name: "Modifier" }).click();
 

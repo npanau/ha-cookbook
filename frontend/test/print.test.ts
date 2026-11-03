@@ -17,6 +17,14 @@ describe("print", () => {
     expect(html).not.toContain("<h2>Notes</h2>");
   });
 
+  it("prints the quantities for the chosen number of servings", () => {
+    const recipe = makeRecipe({ ingredients: [{ text: "200 g de farine", section: null }] });
+    const html = buildPrintHtml(recipe, t, "fr", 6);
+    expect(html).toContain("<strong>Pour</strong> 6 personnes");
+    expect(html).toContain("<li>300 g de farine</li>");
+    expect(buildPrintHtml(recipe, t, "fr")).toContain("<li>200 g de farine</li>");
+  });
+
   it("escapes user content", () => {
     const html = buildPrintHtml(makeRecipe({ name: '<script>alert("x")</script>' }), t, "fr");
     expect(html).not.toContain("<script>");

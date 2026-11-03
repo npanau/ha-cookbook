@@ -1,28 +1,34 @@
-import { formatDuration, groupBySection, totalTime } from "./format";
+import { formatDuration, formatServings, groupBySection, totalTime } from "./format";
 import type { Localize } from "./i18n";
+import { scaledText } from "./quantity";
 import type { Recipe, RecipeItem } from "./types";
 
 const escape = (text: string): string =>
   text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-function items(list: RecipeItem[], tag: "ul" | "ol"): string {
+function items(list: RecipeItem[], tag: "ul" | "ol", text: (item: RecipeItem) => string): string {
   return groupBySection(list)
     .map(
       (group) =>
         `${group.section ? `<h3>${escape(group.section)}</h3>` : ""}<${tag}>${group.items
-          .map((item) => `<li>${escape(item.text)}</li>`)
+          .map((item) => `<li>${escape(text(item))}</li>`)
           .join("")}</${tag}>`,
     )
     .join("");
 }
 
-/** Standalone HTML document of a recipe, with its own print stylesheet. */
-export function buildPrintHtml(recipe: Recipe, t: Localize, language: string): string {
+/**
+ * Standalone HTML document of a recipe, with its own print stylesheet.
+ * `servings`: number of people to print the quantities for (default: the recipe's).
+ */
+export function buildPrintHtml(recipe: Recipe, t: Localize, language: string, servings = recipe.servings): string {
+  const factor = recipe.servings && servings ? servings / recipe.servings : 1;
+  const ingredient = (item: RecipeItem) => scaledText(item.text, factor, language);
   const meta = [
     ["prep_time", formatDuration(recipe.prep_time, t)],
     ["cook_time", formatDuration(recipe.cook_time, t)],
     ["total_time", formatDuration(totalTime(recipe), t)],
-    ["servings", recipe.servings ?? ""],
+    ["servings", formatServings(servings, recipe.servings_unit)],
   ] as const;
   const metaHtml = meta
     .filter(([, value]) => value)
@@ -57,8 +63,8 @@ export function buildPrintHtml(recipe: Recipe, t: Localize, language: string): s
 ${recipe.categories.length ? `<div class="categories">${escape(recipe.categories.join(" · "))}</div>` : ""}
 ${metaHtml ? `<div class="meta">${metaHtml}</div>` : ""}
 ${paragraph(recipe.description)}
-${section(t("ingredients"), recipe.ingredients.length ? items(recipe.ingredients, "ul") : "")}
-${section(t("steps"), recipe.steps.length ? items(recipe.steps, "ol") : "")}
+${section(t("ingredients"), recipe.ingredients.length ? items(recipe.ingredients, "ul", ingredient) : "")}
+${section(t("steps"), recipe.steps.length ? items(recipe.steps, "ol", (item) => item.text) : "")}
 ${section(t("notes"), paragraph(recipe.notes))}
 ${recipe.source_url ? `<p class="source">${escape(recipe.source_url)}</p>` : ""}
 </body>
@@ -66,10 +72,10 @@ ${recipe.source_url ? `<p class="source">${escape(recipe.source_url)}</p>` : ""}
 }
 
 /** Prints the recipe alone (not the HA sidebar) through a hidden iframe. */
-export function printRecipe(recipe: Recipe, t: Localize, language: string): void {
+export function printRecipe(recipe: Recipe, t: Localize, language: string, servings = recipe.servings): void {
   const iframe = document.createElement("iframe");
   iframe.style.cssText = "position:fixed;width:0;height:0;border:0;visibility:hidden";
-  iframe.srcdoc = buildPrintHtml(recipe, t, language);
+  iframe.srcdoc = buildPrintHtml(recipe, t, language, servings);
   iframe.addEventListener("load", () => {
     const win = iframe.contentWindow;
     if (!win) return;

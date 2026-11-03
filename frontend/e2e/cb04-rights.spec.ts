@@ -10,7 +10,8 @@ test("CB04 : le membre crée et modifie, seul l'admin supprime", async ({ cookbo
   await expect(memberSheet.getByRole("heading", { level: 1 })).toHaveText(`Quiche ${uid}`);
   await expect(memberSheet.getByRole("button", { name: "Supprimer" })).toHaveCount(0);
   await memberSheet.getByRole("button", { name: "Modifier" }).click();
-  await member.editor().locator('input[name="servings"]').fill("6 parts");
+  await member.editor().locator('input[name="servings"]').fill("6");
+  await member.editor().locator('input[name="servings_unit"]').fill("parts");
   await member.editor().getByRole("button", { name: "Enregistrer" }).click();
   await expect(memberSheet.locator("footer")).toContainText("Modifiée par Membre E2E");
 

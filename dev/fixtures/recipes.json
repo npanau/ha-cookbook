@@ -1,0 +1,127 @@
+[
+  {
+    "name": "Crème brûlée",
+    "description": "Le grand classique.\nÀ préparer la veille : elle doit reposer une nuit au frais.",
+    "categories": ["Dessert"],
+    "prep_time": 20,
+    "cook_time": 40,
+    "servings": 6,
+    "servings_unit": "ramequins",
+    "ingredients": [
+      {"text": "6 jaunes d'œufs", "section": "Appareil"},
+      {"text": "50 cl de crème liquide entière", "section": "Appareil"},
+      {"text": "100 g de sucre", "section": "Appareil"},
+      {"text": "1 gousse de vanille", "section": "Appareil"},
+      {"text": "6 c. à café de cassonade", "section": "Finition"}
+    ],
+    "steps": [
+      {"text": "Fendre la gousse de vanille et faire infuser les graines dans la crème chaude 10 min.", "section": "Appareil"},
+      {"text": "Fouetter les jaunes avec le sucre sans les faire mousser, puis ajouter la crème.", "section": "Appareil"},
+      {"text": "Répartir dans les ramequins et cuire 40 min à 100 °C.", "section": "Cuisson"},
+      {"text": "Laisser refroidir puis réserver une nuit au frais.", "section": "Cuisson"},
+      {"text": "Saupoudrer de cassonade et caraméliser au chalumeau juste avant de servir.", "section": "Finition"}
+    ],
+    "notes": "Ne pas dépasser 100 °C, sinon la crème devient granuleuse.",
+    "source_url": "https://www.marmiton.org/recettes/recette_creme-brulee_11491.aspx"
+  },
+  {
+    "name": "Quiche lorraine",
+    "categories": ["Plat"],
+    "prep_time": 15,
+    "cook_time": 35,
+    "servings": 6,
+    "servings_unit": "personnes",
+    "ingredients": [
+      {"text": "1 pâte brisée", "section": null},
+      {"text": "200 g de lardons fumés", "section": null},
+      {"text": "3 œufs", "section": null},
+      {"text": "20 cl de crème fraîche épaisse", "section": null},
+      {"text": "20 cl de lait", "section": null},
+      {"text": "1 pincée de muscade", "section": null},
+      {"text": "Sel, poivre", "section": null}
+    ],
+    "steps": [
+      {"text": "Préchauffer le four à 180 °C et foncer un moule avec la pâte.", "section": null},
+      {"text": "Faire revenir les lardons à sec et les répartir sur la pâte.", "section": null},
+      {"text": "Battre les œufs, la crème et le lait ; saler peu, poivrer, ajouter la muscade.", "section": null},
+      {"text": "Verser sur les lardons et cuire 35 min.", "section": null}
+    ]
+  },
+  {
+    "name": "Gratin dauphinois",
+    "categories": ["Plat", "Végétarien"],
+    "prep_time": 25,
+    "cook_time": 75,
+    "servings": 4,
+    "servings_unit": "personnes",
+    "ingredients": [
+      {"text": "1 kg de pommes de terre à chair ferme", "section": null},
+      {"text": "50 cl de lait entier", "section": null},
+      {"text": "25 cl de crème liquide", "section": null},
+      {"text": "2 gousses d'ail", "section": null},
+      {"text": "20 g de beurre", "section": null},
+      {"text": "Noix de muscade, sel, poivre", "section": null}
+    ],
+    "steps": [
+      {"text": "Éplucher et couper les pommes de terre en fines rondelles, sans les laver.", "section": null},
+      {"text": "Les faire cuire 10 min dans le lait avec l'ail écrasé, sel, poivre et muscade.", "section": null},
+      {"text": "Verser dans un plat beurré, napper de crème et cuire 1 h à 160 °C.", "section": null}
+    ],
+    "notes": "Le gratin doit être bien doré : finir 5 min sous le gril si besoin."
+  },
+  {
+    "name": "Pâte à crêpes",
+    "categories": ["Dessert", "Base"],
+    "prep_time": 10,
+    "servings": 15,
+    "servings_unit": "crêpes",
+    "ingredients": [
+      {"text": "250 g de farine", "section": null},
+      {"text": "4 œufs", "section": null},
+      {"text": "½ l de lait", "section": null},
+      {"text": "2 c. à soupe de sucre", "section": null},
+      {"text": "50 g de beurre fondu", "section": null},
+      {"text": "1 pincée de sel", "section": null}
+    ],
+    "steps": [
+      {"text": "Mélanger la farine, le sucre et le sel ; creuser un puits et y casser les œufs.", "section": null},
+      {"text": "Délayer petit à petit avec le lait pour éviter les grumeaux.", "section": null},
+      {"text": "Ajouter le beurre fondu et laisser reposer 1 h.", "section": null}
+    ]
+  },
+  {
+    "name": "Soupe de potimarron",
+    "categories": ["Soupe", "Végétarien"],
+    "prep_time": 15,
+    "cook_time": 30,
+    "servings": 4,
+    "servings_unit": "personnes",
+    "ingredients": [
+      {"text": "1 potimarron (environ 1,2 kg)", "section": null},
+      {"text": "2 à 3 pommes de terre", "section": null},
+      {"text": "1 oignon", "section": null},
+      {"text": "1 l de bouillon de légumes", "section": null},
+      {"text": "10 cl de crème", "section": null},
+      {"text": "Sel, poivre", "section": null}
+    ],
+    "steps": [
+      {"text": "Couper le potimarron en morceaux (inutile de l'éplucher) et les pommes de terre en cubes.", "section": null},
+      {"text": "Faire suer l'oignon émincé, ajouter les légumes et le bouillon, cuire 30 min.", "section": null},
+      {"text": "Mixer, ajouter la crème, rectifier l'assaisonnement.", "section": null}
+    ]
+  },
+  {
+    "name": "Vinaigrette à la moutarde",
+    "categories": ["Base"],
+    "prep_time": 5,
+    "ingredients": [
+      {"text": "1 c. à soupe de moutarde de Dijon", "section": null},
+      {"text": "1 c. à soupe de vinaigre de vin", "section": null},
+      {"text": "3 c. à soupe d'huile", "section": null},
+      {"text": "Sel, poivre", "section": null}
+    ],
+    "steps": [
+      {"text": "Mélanger la moutarde, le vinaigre et le sel, puis émulsionner avec l'huile.", "section": null}
+    ]
+  }
+]

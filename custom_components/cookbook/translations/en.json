@@ -8,5 +8,18 @@
     "abort": {
       "single_instance_allowed": "Already configured. Only a single configuration possible."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Cookbook options",
+        "data": {
+          "delete_recipes_on_remove": "Also delete all recipes when the integration is removed"
+        },
+        "data_description": {
+          "delete_recipes_on_remove": "Off by default: removing then re-adding the integration keeps your recipes. Enable this only if you want a full cleanup."
+        }
+      }
+    }
   }
 }

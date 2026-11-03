@@ -8,5 +8,18 @@
     "abort": {
       "single_instance_allowed": "Déjà configuré. Une seule configuration possible."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options de Cookbook",
+        "data": {
+          "delete_recipes_on_remove": "Supprimer aussi toutes les recettes lors de la suppression de l'intégration"
+        },
+        "data_description": {
+          "delete_recipes_on_remove": "Désactivé par défaut : supprimer puis réinstaller l'intégration conserve vos recettes. À activer uniquement pour tout effacer."
+        }
+      }
+    }
   }
 }

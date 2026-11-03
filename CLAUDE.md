@@ -12,15 +12,27 @@ Nicolas déclenche lui-même : ne jamais s'y connecter, y copier des fichiers ou
 
 ## Architecture
 
-- **Backend** (`custom_components/cookbook/`, Python 3.14) : config flow à instance unique (`single_config_entry`),
-  enregistrement du panneau via `panel_custom.async_register_panel`, bundle JS servi en statique sur `/cookbook_static/`.
-  À venir : API en commandes WebSocket `cookbook/*`, stockage via `helpers.storage.Store` (`.storage/cookbook`, avec
-  version de schéma et migrations), images dans `/config/cookbook/images/` servies par une `HomeAssistantView` avec
-  chemins signés, import d'URL via `recipe-scrapers` + JSON-LD.
+- **Backend** (`custom_components/cookbook/`, Python 3.14) :
+  - `config_flow.py` : instance unique (`single_config_entry`) ; option « supprimer aussi les recettes » (décochée
+    par défaut) lue par `async_remove_entry`. **Par défaut, supprimer l'intégration conserve les recettes.**
+  - `__init__.py` : panneau via `panel_custom.async_register_panel`, bundle servi en statique sur `/cookbook_static/` ;
+    le `CookbookStore` est dans `entry.runtime_data` ; les commandes WS sont enregistrées une fois dans `async_setup`.
+  - `models.py` : validation voluptuous des champs éditables (`FIELD_VALIDATORS`) et `fold()` (minuscules, sans
+    accents ni ligatures œ/æ) pour comparer catégories et recherche. `id`, dates, auteurs et `image` sont gérés par
+    le serveur, jamais acceptés du client.
+  - `store.py` : `helpers.storage.Store` (`.storage/cookbook`, version 1.1, `{"recipes": {id: recipe}}`), en mémoire,
+    écrit à chaque modification. **Toute évolution du schéma** : incrémenter la version et ajouter la migration dans
+    `_CookbookStorage._async_migrate_func`, avec un test. Le store renvoie toujours des copies.
+  - `websocket_api.py` : `cookbook/list|get|create|update|delete|search|categories`. `update` est **partiel** et
+    accepte `expected_updated_at` (erreur `conflict` si la recette a changé). Erreurs : `not_found`, `unauthorized`,
+    `conflict`, `not_loaded`, `invalid_format`.
+  - À venir : `cookbook/scrape` (`recipe-scrapers` + JSON-LD), images dans `/config/cookbook/images/` servies par une
+    `HomeAssistantView` avec chemins signés.
 - **Frontend** (`frontend/`) : web component **Lit 3 + TypeScript**, bundle ES unique via **Vite**
   → `custom_components/cookbook/frontend/cookbook-panel.js`. Utiliser les variables CSS du thème HA.
 - **Droits** : tout utilisateur peut lire / créer / modifier / importer ; **suppression réservée aux admins**
-  (`connection.user.is_admin`). Chaque recette garde `created_by` / `updated_by` (id utilisateur HA).
+  (décorateur `@websocket_api.require_admin`). Chaque recette garde `created_by` / `updated_by` (id utilisateur HA) ;
+  `get` / `create` / `update` ajoutent `created_by_name` / `updated_by_name`, résolus à la lecture.
 - **i18n** : FR + EN. Backend : `strings.json` + `translations/{en,fr}.json` (garder les trois synchronisés).
   Frontend : `frontend/src/i18n/{en,fr}.json`, langue de l'utilisateur via `hass.locale.language`.
   Le titre du panneau reste « Cookbook » dans toutes les langues.

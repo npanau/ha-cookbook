@@ -12,3 +12,6 @@ PANEL_WEBCOMPONENT: Final = "cookbook-panel"
 STATIC_URL: Final = "/cookbook_static"
 FRONTEND_DIR: Final = "frontend"
 FRONTEND_FILE: Final = "cookbook-panel.js"
+
+# Option: also delete the recipes when the integration is removed.
+CONF_DELETE_RECIPES_ON_REMOVE: Final = "delete_recipes_on_remove"

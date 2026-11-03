@@ -98,6 +98,33 @@ describe("item list editor", () => {
     expect(changes.at(-1)!.map((i) => i.text)).toEqual(["b", "a"]);
   });
 
+  it("survives a drag-and-drop (Sortable moves the DOM node itself)", async () => {
+    const { el, changes } = await editor([
+      { text: "a", section: null },
+      { text: "b", section: null },
+      { text: "c", section: null },
+    ]);
+    const sortable = (el as unknown as { sortable: { option(name: string): ((e: unknown) => void) | undefined } }).sortable;
+    const list = $(el, "ol")!;
+    const items = $$(el, "li");
+
+    // Drag "c" above "a", as Sortable does: move the <li>, then fire onEnd.
+    sortable.option("onStart")?.({ item: items[2] });
+    list.insertBefore(items[2], items[0]);
+    sortable.option("onEnd")!({ oldIndex: 2, newIndex: 0, item: items[2], from: list });
+    await settle(el);
+    expect(texts(el)).toEqual(["c", "a", "b"]);
+    expect(changes.at(-1)!.map((i) => i.text)).toEqual(["c", "a", "b"]);
+
+    // The list keeps working afterwards (Lit's markers are intact).
+    key(fields(el)[2], "Enter");
+    await settle(el);
+    expect(texts(el)).toEqual(["c", "a", "b", ""]);
+    $$<HTMLButtonElement>(el, ".down")[0].click();
+    await settle(el);
+    expect(texts(el)).toEqual(["a", "c", "b", ""]);
+  });
+
   it("adds sections that apply to the following lines", async () => {
     const { el, changes } = await editor([{ text: "sel", section: null }]);
     $<HTMLButtonElement>(el, ".add-section")!.click();

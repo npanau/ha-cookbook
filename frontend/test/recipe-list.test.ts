@@ -156,6 +156,12 @@ describe("recipe list", () => {
     expect($(filtered, ".message")!.textContent).toContain("Aucune recette ne correspond");
   });
 
+  it("keeps the new-recipe label in the DOM (accessible name on small screens)", async () => {
+    const { hass } = setup();
+    const el = await mount<CookbookRecipeList>("cookbook-recipe-list", { hass });
+    expect($(el, ".new .new-label")!.textContent).toBe("Nouvelle recette");
+  });
+
   it("opens the editor for a new recipe", async () => {
     const { hass } = setup();
     const el = await mount<CookbookRecipeList>("cookbook-recipe-list", { hass });

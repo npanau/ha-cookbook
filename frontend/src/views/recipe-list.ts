@@ -243,9 +243,15 @@ export class CookbookRecipeList extends LitElement {
         min-height: 44px;
         border-radius: 22px;
       }
+      /* Visually hidden on small screens, but kept as the button's accessible name. */
       @media (max-width: 500px) {
         .new-label {
-          display: none;
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+          white-space: nowrap;
         }
       }
       .search {

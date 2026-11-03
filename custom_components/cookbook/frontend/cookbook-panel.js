@@ -2191,7 +2191,7 @@ function fr(e) {
 // src/components/item-list-editor.ts
 var pr = class extends E {
 	constructor(...e) {
-		super(...e), this.items = [], this.multiline = !1, this.numbered = !1, this.rows = [sr("item")];
+		super(...e), this.items = [], this.multiline = !1, this.numbered = !1, this.rows = [sr("item")], this.dragAnchor = null;
 	}
 	static {
 		this.properties = {
@@ -2213,8 +2213,12 @@ var pr = class extends E {
 		this.sortable = Q.create(e, {
 			handle: ".handle",
 			animation: 150,
+			onStart: ({ item: e }) => {
+				this.dragAnchor = e.nextSibling;
+			},
 			onEnd: ({ oldIndex: e, newIndex: t, item: n, from: r }) => {
-				e != null && t != null && e !== t && (r.removeChild(n), r.insertBefore(n, r.children[e] ?? null), this.setRows(ur(this.rows, e, t)));
+				let i = this.dragAnchor;
+				this.dragAnchor = null, e != null && t != null && e !== t && (r.insertBefore(n, i), this.setRows(ur(this.rows, e, t)));
 			}
 		});
 	}
@@ -3061,9 +3065,15 @@ var wr = class extends E {
         min-height: 44px;
         border-radius: 22px;
       }
+      /* Visually hidden on small screens, but kept as the button's accessible name. */
       @media (max-width: 500px) {
         .new-label {
-          display: none;
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+          white-space: nowrap;
         }
       }
       .search {

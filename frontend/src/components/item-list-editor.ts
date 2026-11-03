@@ -40,6 +40,7 @@ export class CookbookItemListEditor extends LitElement {
 
   private lastEmitted?: RecipeItem[];
   private sortable?: Sortable;
+  private dragAnchor: Node | null = null;
   private focusAfterRender?: { id: number; atEnd: boolean };
 
   protected willUpdate(changed: Map<string, unknown>) {
@@ -55,11 +56,16 @@ export class CookbookItemListEditor extends LitElement {
     this.sortable = Sortable.create(list, {
       handle: ".handle",
       animation: 150,
+      // Lit wraps each row between comment markers: remember the node right after the dragged
+      // row (its end marker) to put it back exactly there, then let Lit apply the new order.
+      onStart: ({ item }) => {
+        this.dragAnchor = item.nextSibling;
+      },
       onEnd: ({ oldIndex, newIndex, item, from }) => {
+        const anchor = this.dragAnchor;
+        this.dragAnchor = null;
         if (oldIndex == null || newIndex == null || oldIndex === newIndex) return;
-        // Put the node back where Lit expects it, then let Lit re-render from the new order.
-        from.removeChild(item);
-        from.insertBefore(item, from.children[oldIndex] ?? null);
+        from.insertBefore(item, anchor);
         this.setRows(moveRow(this.rows, oldIndex, newIndex));
       },
     });

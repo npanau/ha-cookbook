@@ -20,3 +20,8 @@ custom_components/cookbook/frontend/*.map
 
 # Personal working plan (kept in Claude Desktop, local copy only)
 docs/PLAN.md
+
+# E2E (Playwright)
+frontend/e2e/.auth/
+frontend/playwright-output/
+frontend/playwright-report/

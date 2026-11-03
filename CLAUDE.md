@@ -52,7 +52,7 @@ custom_components/cookbook/   # l'intégration (montée dans le HA de dev)
 frontend/                     # sources Lit/TS + Vite
 tests/                        # pytest-homeassistant-custom-component
 dev/config/                   # config du HA de dev (seul configuration.yaml est versionné)
-.github/workflows/            # hassfest, validation HACS, tests (Python + bundle à jour)
+.github/workflows/            # hassfest, validation HACS, tests (Python, frontend + bundle à jour, E2E)
 ```
 
 ## Commandes
@@ -66,9 +66,27 @@ dev/config/                   # config du HA de dev (seul configuration.yaml est
 | `make test` | Tous les tests (`make test-py` : pytest, `make test-front` : Vitest + happy-dom) |
 | `make lint` / `make format` | ruff |
 | `make typecheck` | `tsc --noEmit` sur le frontend |
+| `make e2e` | Tests E2E Playwright (desktop + mobile) sur un HA jetable ; filtres `GREP="CB03"`, `PROJECT=mobile` |
+| `make e2e-headed` | Idem, navigateur visible |
 | `make build` | Bundle de production : **à lancer avant chaque commit touchant `frontend/`** (la CI vérifie que le bundle commité est à jour ; le watch produit un bundle de dev non minifié) |
 
 Modification TypeScript : le watch reconstruit, il suffit de recharger la page (le statique est servi sans cache).
+
+## Tests E2E (Playwright)
+
+- **Instance dédiée** : service `homeassistant-e2e` (profil compose `e2e`, port **8124**, `/config` en tmpfs) : neuve à
+  chaque démarrage, le HA de dev (8123) n'est jamais touché. `make e2e` la recrée, construit le bundle, lance les
+  tests puis l'arrête.
+- **Initialisation** (`frontend/e2e/ha-setup.ts`, `globalSetup`) entièrement par API, sans passer par l'écran de
+  connexion de HA : onboarding (admin `e2e-admin`, langue fr), ajout de l'intégration par le config flow, compte non
+  admin `e2e-membre` (WebSocket `config/auth/create`), puis jetons injectés dans `localStorage.hassTokens`
+  (`frontend/e2e/.auth/`, non versionné). Refuse de tourner sur une instance déjà initialisée.
+- **Scénarios** `frontend/e2e/cbNN-*.spec.ts`, titres `CBNN : …` ; projets `desktop` et `mobile` (Pixel 7), connectés
+  en admin ; fixture `member` pour le compte non admin. Les tests tournent en parallèle sur la même instance :
+  **toujours des noms uniques** (fixture `uid`) et des assertions limitées à ses propres données.
+- Sélecteurs par rôle / libellé (`getByRole`, traversent le shadow DOM) ou `name` des champs du formulaire.
+  **Pas de comparaison de captures d'écran** (rendu des polices différent Mac / Linux).
+- Échec en CI : rapport et traces en artefact `playwright-report`, logs HA dans le job.
 
 ## Versions
 
@@ -81,4 +99,5 @@ La version de l'intégration (`manifest.json`) sert aussi au cache-busting du bu
 
 - Code, commentaires, commits, `README.md` : **anglais**. `CLAUDE.md`, `README.fr.md`, échanges : français.
 - Clés de `manifest.json` : `domain`, `name`, puis ordre alphabétique (exigé par hassfest).
-- Toute nouvelle fonctionnalité s'accompagne de tests : pytest pour le backend, Vitest (`frontend/test/`) pour le frontend.
+- Toute nouvelle fonctionnalité s'accompagne de tests : pytest pour le backend, Vitest (`frontend/test/`) pour le
+  frontend, et un scénario E2E quand elle touche un parcours utilisateur.

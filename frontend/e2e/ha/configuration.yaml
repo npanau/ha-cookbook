@@ -1,0 +1,8 @@
+# Throwaway Home Assistant for the E2E tests (port 8124): /config is a tmpfs,
+# so every start is a fresh, not-yet-onboarded instance.
+default_config:
+
+logger:
+  default: warning
+  logs:
+    custom_components.cookbook: debug

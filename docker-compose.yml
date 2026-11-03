@@ -25,5 +25,20 @@ services:
       - frontend_node_modules:/app/frontend/node_modules
     profiles: ["frontend"]
 
+  # E2E tests only (`make e2e`): fresh instance on every start, dev data untouched.
+  homeassistant-e2e:
+    image: ghcr.io/home-assistant/home-assistant:${HA_VERSION:-2026.10.4}
+    container_name: cookbook-ha-e2e
+    ports:
+      - "8124:8123"
+    environment:
+      TZ: Europe/Paris
+    tmpfs:
+      - /config
+    volumes:
+      - ./frontend/e2e/ha/configuration.yaml:/config/configuration.yaml:ro
+      - ./custom_components/cookbook:/config/custom_components/cookbook:ro
+    profiles: ["e2e"]
+
 volumes:
   frontend_node_modules:

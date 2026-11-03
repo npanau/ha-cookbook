@@ -34,3 +34,35 @@ jobs:
       - run: npm run build
       - name: Committed bundle is up to date
         run: git diff --exit-code -- ../custom_components/cookbook/frontend
+
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Start the throwaway Home Assistant
+        run: docker compose --profile e2e up -d homeassistant-e2e
+        working-directory: .
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - name: Home Assistant logs
+        if: failure()
+        run: docker compose --profile e2e logs homeassistant-e2e
+        working-directory: .
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report/
+            frontend/playwright-output/
+          retention-days: 14

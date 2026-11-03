@@ -1,5 +1,5 @@
 # Dev shortcuts — the local Docker HA only, never production.
-.PHONY: up up-ha down logs restart-ha watch build typecheck test test-py test-front lint format
+.PHONY: up up-ha down logs restart-ha watch build typecheck test test-py test-front e2e e2e-headed lint format
 
 up: ## HA + frontend watch, both in Docker
 	docker compose --profile frontend up -d
@@ -32,6 +32,19 @@ test-py:
 
 test-front:
 	cd frontend && npm test
+
+# E2E: fresh throwaway HA on port 8124 (never the dev one), production bundle, Playwright.
+# Filters: make e2e GREP="CB03" PROJECT=mobile
+E2E_ARGS = $(if $(GREP),--grep "$(GREP)") $(if $(PROJECT),--project=$(PROJECT))
+
+e2e: ## E2E tests (desktop + mobile)
+	cd frontend && npm run build
+	docker compose --profile e2e up -d --force-recreate homeassistant-e2e
+	cd frontend && npx playwright test $(E2E_ARGS) $(E2E_EXTRA); status=$$?; \
+		cd .. && docker compose --profile e2e stop homeassistant-e2e; exit $$status
+
+e2e-headed: ## E2E tests with a visible browser
+	$(MAKE) e2e E2E_EXTRA="--headed"
 
 lint:
 	uv run ruff check .

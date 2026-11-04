@@ -1,3 +1,5 @@
+<img src="custom_components/cookbook/brand/icon@2x.png" alt="" width="96" align="right">
+
 # Cookbook pour Home Assistant
 
 *[English version](README.md)*
@@ -39,6 +41,13 @@ Une photo par recette, prise ou choisie depuis l'éditeur (ou importée avec la 
 redimensionnées et stockées dans votre Home Assistant (`/config/cookbook/images/`, inclus dans les
 sauvegardes), **sans aucune métadonnée** : une photo de téléphone peut contenir la position GPS de l'endroit
 où elle a été prise. Elles ne sont visibles que par les utilisateurs connectés à Home Assistant.
+
+## Garder l'écran allumé en cuisine
+
+Sur une recette, *Garder l'écran allumé* empêche le téléphone ou la tablette de se mettre en veille.
+Les navigateurs ne l'autorisent qu'en **HTTPS** : le bouton est masqué quand Home Assistant est ouvert
+avec une adresse `http://`. C'est aussi le cas dans l'application Home Assistant, qui passe sur
+l'*URL interne* sur le Wi-Fi de la maison : si cette URL est en `http://…`, le bouton n'y apparaît pas.
 
 ## Développement
 

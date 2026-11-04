@@ -77,7 +77,9 @@ Nicolas déclenche lui-même : ne jamais s'y connecter, y copier des fichiers ou
 ```
 custom_components/cookbook/   # l'intégration (montée dans le HA de dev)
   frontend/                   # bundle GÉNÉRÉ, commité pour HACS : ne jamais l'éditer à la main
+  brand/                      # icônes PNG (icon, dark_icon, @2x) lues par HA ≥ 2026.3, générées depuis assets/brand/
 frontend/                     # sources Lit/TS + Vite
+assets/brand/                 # logo source (SVG, Claude Design) : à reconvertir en PNG 256/512 si on le modifie
 tests/                        # pytest-homeassistant-custom-component
 dev/config/                   # config du HA de dev (seul configuration.yaml est versionné)
 dev/fixtures/, dev/seed.py    # recettes de démonstration et `make seed`
@@ -143,7 +145,7 @@ Modification TypeScript : le watch reconstruit, il suffit de recharger la page (
   échoue → récupérer la branche, `make build`, commiter le bundle sur la branche.
 - **Accès GitHub** : `gh` est authentifié sur le poste (tickets, PR, runs CI : `gh run list`, `gh run view --log-failed`).
 - La version de l'intégration (`manifest.json`) sert aussi au cache-busting du bundle (`?v=`).
-- **Publier une version** : incrémenter `version` dans `manifest.json` (indispensable aussi pour le cache du
+- **Publier une version** : incrémenter `version` dans `manifest.json` et `frontend/package.json` (`npm version X.Y.Z --no-git-tag-version`, la première sert aussi au cache du
   bundle), commiter, puis `git tag vX.Y.Z && git push --tags` et `gh release create vX.Y.Z --notes …`. HACS propose
   les releases GitHub aux utilisateurs (sans `zip_release` : il télécharge `custom_components/cookbook` au tag).
 

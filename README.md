@@ -1,3 +1,5 @@
+<img src="custom_components/cookbook/brand/icon@2x.png" alt="" width="96" align="right">
+
 # Cookbook for Home Assistant
 
 *[Version française](README.fr.md)*
@@ -38,6 +40,13 @@ One photo per recipe, taken or chosen from the editor (or imported with the reci
 and stored in your Home Assistant (`/config/cookbook/images/`, included in backups), with **all metadata
 removed** — a phone photo can carry the GPS position of where it was taken. They are only shown to
 logged-in Home Assistant users.
+
+## Keeping the screen on while cooking
+
+On a recipe, *Keep screen on* stops the phone or tablet from going to sleep. Browsers only allow this
+over **HTTPS**: the button is hidden when Home Assistant is opened with an `http://` address. This
+includes the Home Assistant app, which switches to the *internal URL* on your home Wi-Fi: if that URL
+is `http://…`, the button does not show up there.
 
 ## Development
 

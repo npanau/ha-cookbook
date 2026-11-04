@@ -4,11 +4,14 @@
 
 Un gestionnaire de recettes intégré à Home Assistant, dans un panneau de la barre latérale. Pas de compte supplémentaire : il utilise les utilisateurs Home Assistant.
 
-> 🚧 En cours de développement, pas encore utilisable.
+> Première version (0.1) : retours et signalements de bugs bienvenus dans les tickets.
 
 ## Installation (dépôt personnalisé HACS)
 
-1. HACS → ⋮ → *Dépôts personnalisés* → ajouter `https://github.com/npanau/ha-cookbook` (type *Intégration*).
+[![Ouvrir ce dépôt dans HACS sur votre Home Assistant.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=npanau&repository=ha-cookbook&category=integration)
+
+1. Cliquer sur le bouton ci-dessus (il ajoute le dépôt à HACS), ou HACS → ⋮ → *Dépôts personnalisés* → ajouter
+   `https://github.com/npanau/ha-cookbook` (type *Intégration*).
 2. Installer **Cookbook**, puis redémarrer Home Assistant.
 3. *Paramètres → Appareils et services → Ajouter une intégration → Cookbook*.
 

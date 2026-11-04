@@ -22,10 +22,10 @@ Nicolas déclenche lui-même : ne jamais s'y connecter, y copier des fichiers ou
     le serveur, jamais acceptés du client.
   - `store.py` : `helpers.storage.Store` (`.storage/cookbook`, version 1.1, `{"recipes": {id: recipe}}`), en mémoire,
     écrit à chaque modification. Le store renvoie toujours des copies.
-  - **Migrations** : tant qu'aucune version n'est déployée (ni prod, ni release HACS), on modifie le schéma 1.1 en
-    place et on régénère les données de dev (`make seed`). **À partir de la première version déployée**, toute
-    évolution du schéma incrémente la version et ajoute sa migration dans `_CookbookStorage._async_migrate_func`,
-    avec un test.
+  - **Migrations obligatoires** : la 0.1.0 est publiée et déployée en prod (2026-11-04), avec le schéma 1.1.
+    Toute évolution du schéma incrémente la version et ajoute sa migration dans
+    `_CookbookStorage._async_migrate_func`, avec un test (données 1.1 → nouvelle version). Ne plus jamais modifier
+    un schéma publié en place ; `make seed` reste valable pour régénérer les données de dev.
   - `websocket_api.py` : `cookbook/list|get|create|update|delete|search|categories`. `update` est **partiel** et
     accepte `expected_updated_at` (erreur `conflict` si la recette a changé). Erreurs : `not_found`, `unauthorized`,
     `conflict`, `not_loaded`, `invalid_format`.
@@ -143,6 +143,9 @@ Modification TypeScript : le watch reconstruit, il suffit de recharger la page (
   échoue → récupérer la branche, `make build`, commiter le bundle sur la branche.
 - **Accès GitHub** : `gh` est authentifié sur le poste (tickets, PR, runs CI : `gh run list`, `gh run view --log-failed`).
 - La version de l'intégration (`manifest.json`) sert aussi au cache-busting du bundle (`?v=`).
+- **Publier une version** : incrémenter `version` dans `manifest.json` (indispensable aussi pour le cache du
+  bundle), commiter, puis `git tag vX.Y.Z && git push --tags` et `gh release create vX.Y.Z --notes …`. HACS propose
+  les releases GitHub aux utilisateurs (sans `zip_release` : il télécharge `custom_components/cookbook` au tag).
 
 ## Conventions
 

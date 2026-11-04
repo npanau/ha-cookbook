@@ -4,11 +4,14 @@
 
 A recipe manager that lives in a Home Assistant sidebar panel. No extra account: it uses Home Assistant users.
 
-> 🚧 Early development. Not ready for use yet.
+> First release (0.1): feedback and bug reports are welcome in the issues.
 
 ## Installation (HACS custom repository)
 
-1. HACS → ⋮ → *Custom repositories* → add `https://github.com/npanau/ha-cookbook` (type *Integration*).
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=npanau&repository=ha-cookbook&category=integration)
+
+1. Click the button above (it adds the repository to HACS), or HACS → ⋮ → *Custom repositories* → add
+   `https://github.com/npanau/ha-cookbook` (type *Integration*).
 2. Install **Cookbook**, then restart Home Assistant.
 3. *Settings → Devices & services → Add integration → Cookbook*.
 

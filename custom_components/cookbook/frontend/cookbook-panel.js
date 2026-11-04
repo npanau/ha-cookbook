@@ -4000,24 +4000,24 @@ var $r = class e extends C {
 		], a = yr(t.updated_at, r);
 		return x`
       <div class="actions">
-        <button class="btn" aria-pressed=${String(this.largeText)} @click=${this.toggleLargeText}>
-          <ha-icon icon="mdi:format-size"></ha-icon>${n("larger_text")}
+        <button class="btn compact" title=${n("larger_text")} aria-pressed=${String(this.largeText)} @click=${this.toggleLargeText}>
+          <ha-icon icon="mdi:format-size"></ha-icon><span class="label">${n("larger_text")}</span>
         </button>
-        ${e.wakeLockSupported ? x`<button class="btn awake" aria-pressed=${String(this.awake)} @click=${this.toggleAwake}>
-              <ha-icon icon="mdi:cellphone-screenshot"></ha-icon>${n("keep_awake")}
+        ${e.wakeLockSupported ? x`<button class="btn compact awake" title=${n("keep_awake")} aria-pressed=${String(this.awake)} @click=${this.toggleAwake}>
+              <ha-icon icon="mdi:cellphone-screenshot"></ha-icon><span class="label">${n("keep_awake")}</span>
             </button>` : S}
-        ${this.checked.size ? x`<button class="btn reset" @click=${this.resetChecks}>
-              <ha-icon icon="mdi:checkbox-blank-off-outline"></ha-icon>${n("reset_checks")}
+        ${this.checked.size ? x`<button class="btn compact reset" title=${n("reset_checks")} @click=${this.resetChecks}>
+              <ha-icon icon="mdi:checkbox-blank-off-outline"></ha-icon><span class="label">${n("reset_checks")}</span>
             </button>` : S}
         <span class="spacer"></span>
         <button class="btn primary edit" @click=${() => T(Ye(t.id))}>
           <ha-icon icon="mdi:pencil"></ha-icon>${n("edit")}
         </button>
-        <button class="btn print" @click=${() => qr(t, n, r, this.servings)}>
-          <ha-icon icon="mdi:printer"></ha-icon>${n("print")}
+        <button class="btn compact print" title=${n("print")} @click=${() => qr(t, n, r, this.servings)}>
+          <ha-icon icon="mdi:printer"></ha-icon><span class="label">${n("print")}</span>
         </button>
-        ${this.hass.user?.is_admin ? x`<button class="btn danger delete" @click=${() => this.confirmDelete = !0}>
-              <ha-icon icon="mdi:delete-outline"></ha-icon>${n("delete")}
+        ${this.hass.user?.is_admin ? x`<button class="btn compact danger delete" title=${n("delete")} @click=${() => this.confirmDelete = !0}>
+              <ha-icon icon="mdi:delete-outline"></ha-icon><span class="label">${n("delete")}</span>
             </button>` : S}
       </div>
 
@@ -4158,6 +4158,24 @@ var $r = class e extends C {
       }
       .spacer {
         flex: 1;
+      }
+      /* Touch screens (phones and tablets, whatever their width): icons only, the label
+         stays as the accessible name and in the tooltip. */
+      @media (pointer: coarse) {
+        .btn.compact {
+          justify-content: center;
+          min-width: 44px;
+          min-height: 44px;
+          padding: 0;
+        }
+        .btn.compact .label {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+          white-space: nowrap;
+        }
       }
       .hero {
         display: block;

@@ -115,6 +115,15 @@ describe("recipe view", () => {
     expect($(again, ".reset")).toBeNull();
   });
 
+  it("keeps a label on icon-only buttons and on edit", async () => {
+    const el = await view(setup({ admin: true }).hass);
+    const compact = $$<HTMLButtonElement>(el, ".actions .btn.compact");
+    expect(compact.map((b) => b.title)).toEqual(["Texte agrandi", "Imprimer", "Supprimer"]);
+    // The label stays in the button (accessible name), only hidden on touch screens.
+    for (const button of compact) expect(button.querySelector(".label")!.textContent).toBe(button.title);
+    expect($(el, ".actions .edit")!.classList.contains("compact")).toBe(false);
+  });
+
   it("toggles larger text and remembers it", async () => {
     const el = await view(setup().hass);
     $<HTMLButtonElement>(el, ".actions .btn")!.click();

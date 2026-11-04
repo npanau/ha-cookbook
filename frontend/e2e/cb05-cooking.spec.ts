@@ -42,3 +42,17 @@ test("CB05 : mode cuisine et impression", async ({ cookbook, uid }) => {
   expect(html).toContain("<li>500 g de pâtes</li>");
   expect(html).not.toContain("Supprimer");
 });
+
+test("CB05 : icônes seules sur écran tactile", async ({ cookbook, uid, isMobile }) => {
+  await cookbook.goto();
+  const recipe = await cookbook.createRecipe({ name: `Icônes ${uid}` });
+  await cookbook.goto(`/recipe/${recipe.id}`);
+  const sheet = cookbook.sheet();
+  await expect(sheet.getByRole("button", { name: "Imprimer" })).toBeVisible();
+  // The visually hidden label still has a 1 px box: check the button width instead.
+  const width = async (name: string) => (await sheet.getByRole("button", { name }).boundingBox())!.width;
+  if (isMobile) expect(await width("Imprimer")).toBeLessThan(50);
+  else expect(await width("Imprimer")).toBeGreaterThan(70);
+  // Edit keeps its label everywhere.
+  expect(await width("Modifier")).toBeGreaterThan(70);
+});

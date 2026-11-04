@@ -201,29 +201,29 @@ export class CookbookRecipeView extends LitElement {
     const updated = formatDate(recipe.updated_at, language);
     return html`
       <div class="actions">
-        <button class="btn" aria-pressed=${String(this.largeText)} @click=${this.toggleLargeText}>
-          <ha-icon icon="mdi:format-size"></ha-icon>${t("larger_text")}
+        <button class="btn compact" title=${t("larger_text")} aria-pressed=${String(this.largeText)} @click=${this.toggleLargeText}>
+          <ha-icon icon="mdi:format-size"></ha-icon><span class="label">${t("larger_text")}</span>
         </button>
         ${CookbookRecipeView.wakeLockSupported
-          ? html`<button class="btn awake" aria-pressed=${String(this.awake)} @click=${this.toggleAwake}>
-              <ha-icon icon="mdi:cellphone-screenshot"></ha-icon>${t("keep_awake")}
+          ? html`<button class="btn compact awake" title=${t("keep_awake")} aria-pressed=${String(this.awake)} @click=${this.toggleAwake}>
+              <ha-icon icon="mdi:cellphone-screenshot"></ha-icon><span class="label">${t("keep_awake")}</span>
             </button>`
           : nothing}
         ${this.checked.size
-          ? html`<button class="btn reset" @click=${this.resetChecks}>
-              <ha-icon icon="mdi:checkbox-blank-off-outline"></ha-icon>${t("reset_checks")}
+          ? html`<button class="btn compact reset" title=${t("reset_checks")} @click=${this.resetChecks}>
+              <ha-icon icon="mdi:checkbox-blank-off-outline"></ha-icon><span class="label">${t("reset_checks")}</span>
             </button>`
           : nothing}
         <span class="spacer"></span>
         <button class="btn primary edit" @click=${() => navigate(editUrl(recipe.id))}>
           <ha-icon icon="mdi:pencil"></ha-icon>${t("edit")}
         </button>
-        <button class="btn print" @click=${() => printRecipe(recipe, t, language, this.servings)}>
-          <ha-icon icon="mdi:printer"></ha-icon>${t("print")}
+        <button class="btn compact print" title=${t("print")} @click=${() => printRecipe(recipe, t, language, this.servings)}>
+          <ha-icon icon="mdi:printer"></ha-icon><span class="label">${t("print")}</span>
         </button>
         ${this.hass.user?.is_admin
-          ? html`<button class="btn danger delete" @click=${() => (this.confirmDelete = true)}>
-              <ha-icon icon="mdi:delete-outline"></ha-icon>${t("delete")}
+          ? html`<button class="btn compact danger delete" title=${t("delete")} @click=${() => (this.confirmDelete = true)}>
+              <ha-icon icon="mdi:delete-outline"></ha-icon><span class="label">${t("delete")}</span>
             </button>`
           : nothing}
       </div>
@@ -392,6 +392,24 @@ export class CookbookRecipeView extends LitElement {
       }
       .spacer {
         flex: 1;
+      }
+      /* Touch screens (phones and tablets, whatever their width): icons only, the label
+         stays as the accessible name and in the tooltip. */
+      @media (pointer: coarse) {
+        .btn.compact {
+          justify-content: center;
+          min-width: 44px;
+          min-height: 44px;
+          padding: 0;
+        }
+        .btn.compact .label {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+          white-space: nowrap;
+        }
       }
       .hero {
         display: block;

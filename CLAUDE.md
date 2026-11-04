@@ -97,7 +97,7 @@ dev/fixtures/, dev/seed.py    # recettes de démonstration et `make seed`
 | `make typecheck` | `tsc --noEmit` sur le frontend |
 | `make e2e` | Tests E2E Playwright (desktop + mobile) sur un HA jetable ; filtres `GREP="CB03"`, `PROJECT=mobile` |
 | `make e2e-headed` | Idem, navigateur visible |
-| `make seed` | Remplace les recettes du HA de **dev** par `dev/fixtures/recipes.json` (validées par le schéma, et par `tests/test_fixtures.py`) |
+| `make seed` | Remplace les recettes du HA de **dev** par `dev/fixtures/recipes.json` (validées par le schéma, et par `tests/test_fixtures.py`) ; la clé `photo` d'une fixture désigne une image générée de `dev/fixtures/photos/`, traitée comme une photo envoyée |
 | `make build` | Bundle de production : **à lancer avant chaque commit touchant `frontend/`** (la CI vérifie que le bundle commité est à jour ; le watch produit un bundle de dev non minifié) |
 
 Modification TypeScript : le watch reconstruit, il suffit de recharger la page (le statique est servi sans cache).

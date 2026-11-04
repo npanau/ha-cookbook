@@ -1,6 +1,7 @@
 [
   {
     "name": "Crème brûlée",
+    "photo": "creme-brulee.jpg",
     "description": "Le grand classique.\nÀ préparer la veille : elle doit reposer une nuit au frais.",
     "categories": ["Dessert"],
     "prep_time": 20,
@@ -26,6 +27,7 @@
   },
   {
     "name": "Quiche lorraine",
+    "photo": "quiche-lorraine.jpg",
     "categories": ["Plat"],
     "prep_time": 15,
     "cook_time": 35,

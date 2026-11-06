@@ -72,3 +72,30 @@ test("CB01 : le nom est obligatoire", async ({ cookbook }) => {
   await expect(editor.getByText("Indiquez un nombre entier de minutes.")).toBeVisible();
   await expect(cookbook.page).toHaveURL(/\/cookbook\/new$/);
 });
+
+test("CB01 : choisir une catégorie existante dans la liste", async ({ cookbook, uid }) => {
+  await cookbook.goto("/new");
+  await cookbook.createRecipe({ name: `Hachis ${uid}`, categories: [`Plat principal ${uid}`, `Dessert ${uid}`] });
+  await cookbook.page.reload(); // suggestions are loaded when the editor opens
+  const editor = cookbook.editor();
+  await editor.locator('input[name="name"]').fill(`Lasagnes ${uid}`);
+
+  // The list opens on the first click and is filtered while typing (accents and case ignored).
+  const category = editor.getByRole("combobox", { name: "Ajouter une catégorie" });
+  await category.click();
+  const listbox = editor.getByRole("listbox");
+  await expect(listbox.getByRole("option", { name: `Plat principal ${uid}` })).toBeVisible();
+  await category.pressSequentially("PLÂ");
+  await expect(listbox.getByRole("option", { name: `Plat principal ${uid}` })).toBeVisible();
+  await expect(listbox.getByRole("option", { name: `Dessert ${uid}` })).toHaveCount(0);
+
+  // Picking it adds a chip that stays after leaving the field.
+  await listbox.getByRole("option", { name: `Plat principal ${uid}` }).click();
+  await expect(category).toHaveValue("");
+  await editor.locator('input[name="name"]').click();
+  await expect(editor.locator("cookbook-category-input .chip")).toHaveText([`Plat principal ${uid}`]);
+
+  await editor.getByRole("button", { name: "Enregistrer" }).click();
+  await expect(cookbook.page).toHaveURL(/\/cookbook\/recipe\/\w+$/);
+  await expect(cookbook.sheet().locator(".chip")).toHaveText([`Plat principal ${uid}`]);
+});

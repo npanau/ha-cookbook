@@ -3,9 +3,11 @@ import { sharedStyles } from "../styles";
 import { fold } from "../text";
 
 /**
- * Categories as removable chips, with suggestions of existing categories.
- * Enter, comma or leaving the field adds the typed text; Backspace on an empty field removes the
- * last chip. Fires "value-changed" with { value: string[] }.
+ * Categories as removable chips, with a dropdown of existing categories (custom combobox: the native
+ * <datalist> behaves differently in each browser and opens erratically inside shadow DOM).
+ * The list opens on focus or click and is filtered while typing (accents and case ignored).
+ * Enter, comma or leaving the field adds the typed text (or the highlighted suggestion); Backspace on
+ * an empty field removes the last chip. Fires "value-changed" with { value: string[] }.
  */
 export class CookbookCategoryInput extends LitElement {
   static properties = {
@@ -13,15 +15,32 @@ export class CookbookCategoryInput extends LitElement {
     suggestions: { attribute: false },
     placeholder: {},
     removeLabel: { attribute: false },
+    open: { state: true },
+    query: { state: true },
+    active: { state: true },
   };
 
   value: string[] = [];
   suggestions: string[] = [];
   placeholder = "";
   removeLabel: (name: string) => string = (name) => name;
+  private open = false;
+  private query = "";
+  /** Index of the highlighted suggestion in `filtered`, -1 when none. */
+  private active = -1;
 
   private get input() {
     return this.renderRoot.querySelector<HTMLInputElement>("input")!;
+  }
+
+  /** Suggestions not chosen yet and containing the typed text; those starting with it first. */
+  private get filtered(): string[] {
+    const query = fold(this.query.trim());
+    const available = this.suggestions.filter((s) => !this.value.some((v) => fold(v) === fold(s)));
+    if (!query) return available;
+    const starts = available.filter((s) => fold(s).startsWith(query));
+    const contains = available.filter((s) => !fold(s).startsWith(query) && fold(s).includes(query));
+    return [...starts, ...contains];
   }
 
   private emit(value: string[]) {
@@ -42,29 +61,68 @@ export class CookbookCategoryInput extends LitElement {
     this.emit(this.value.filter((_, i) => i !== index));
   }
 
+  private clearInput() {
+    this.input.value = "";
+    this.query = "";
+    this.active = -1;
+  }
+
   private commit() {
     this.add(this.input.value);
-    this.input.value = "";
+    this.clearInput();
+  }
+
+  private pick(name: string) {
+    this.add(name);
+    this.clearInput();
+    this.input.focus();
+  }
+
+  private move(step: number) {
+    const count = this.filtered.length;
+    this.open = true;
+    if (!count) return;
+    this.active = this.active < 0 ? (step > 0 ? 0 : count - 1) : (this.active + step + count) % count;
   }
 
   private onKeydown(event: KeyboardEvent) {
-    if ((event.key === "Enter" || event.key === ",") && !event.isComposing) {
+    if (event.isComposing) return;
+    const highlighted = this.open ? this.filtered[this.active] : undefined;
+    if (event.key === "Enter" || event.key === ",") {
       event.preventDefault();
-      this.commit();
+      if (highlighted) this.pick(highlighted);
+      else this.commit();
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      this.move(event.key === "ArrowDown" ? 1 : -1);
+    } else if (event.key === "Escape" && this.open) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.open = false;
+      this.active = -1;
     } else if (event.key === "Backspace" && !this.input.value && this.value.length) {
       this.removeAt(this.value.length - 1);
     }
   }
 
-  /** Picking a suggestion in the datalist fires "input" with the full value. */
-  private onInput(event: InputEvent) {
-    const typed = this.input.value;
-    const picked = event.inputType === undefined || event.inputType === "insertReplacementText";
-    if (picked && this.suggestions.includes(typed)) this.commit();
+  private onInput() {
+    this.query = this.input.value;
+    this.active = -1;
+    this.open = true;
+  }
+
+  private onBlur() {
+    this.commit();
+    this.open = false;
+  }
+
+  protected updated() {
+    this.renderRoot.querySelector(".option.active")?.scrollIntoView?.({ block: "nearest" });
   }
 
   protected render() {
-    const available = this.suggestions.filter((s) => !this.value.some((v) => fold(v) === fold(s)));
+    const matches = this.filtered;
+    const shown = this.open && matches.length > 0;
     return html`
       <div class="field">
         ${this.value.map(
@@ -76,14 +134,35 @@ export class CookbookCategoryInput extends LitElement {
           </span>`,
         )}
         <input
-          list="suggestions"
+          role="combobox"
+          autocomplete="off"
+          aria-autocomplete="list"
+          aria-controls="suggestions"
+          aria-expanded=${shown ? "true" : "false"}
+          aria-activedescendant=${shown && this.active >= 0 ? `option-${this.active}` : ""}
           placeholder=${this.placeholder}
           aria-label=${this.placeholder}
           @keydown=${this.onKeydown}
           @input=${this.onInput}
-          @blur=${this.commit}
+          @focus=${() => (this.open = true)}
+          @click=${() => (this.open = true)}
+          @blur=${this.onBlur}
         />
-        <datalist id="suggestions">${available.map((s) => html`<option value=${s}></option>`)}</datalist>
+        <ul id="suggestions" role="listbox" aria-label=${this.placeholder} ?hidden=${!shown}>
+          ${matches.map(
+            (name, index) => html`<li
+              id="option-${index}"
+              class="option ${index === this.active ? "active" : ""}"
+              role="option"
+              aria-selected=${index === this.active ? "true" : "false"}
+              @mousedown=${(e: Event) => e.preventDefault() /* keeps the focus in the field */}
+              @mousemove=${() => (this.active = index)}
+              @click=${() => this.pick(name)}
+            >
+              ${name}
+            </li>`,
+          )}
+        </ul>
       </div>
     `;
   }
@@ -92,6 +171,7 @@ export class CookbookCategoryInput extends LitElement {
     sharedStyles,
     css`
       .field {
+        position: relative;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -131,6 +211,33 @@ export class CookbookCategoryInput extends LitElement {
         color: var(--primary-text-color);
         font: inherit;
         font-size: 15px;
+      }
+      ul {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        z-index: 5;
+        max-height: 240px;
+        margin: 0;
+        padding: 4px 0;
+        overflow-y: auto;
+        list-style: none;
+        border: 1px solid var(--divider-color);
+        border-radius: 8px;
+        background: var(--card-background-color);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+      ul[hidden] {
+        display: none;
+      }
+      .option {
+        padding: 8px 12px;
+        color: var(--primary-text-color);
+        cursor: pointer;
+      }
+      .option.active {
+        background: var(--secondary-background-color);
       }
     `,
   ];

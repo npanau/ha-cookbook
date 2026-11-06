@@ -934,11 +934,11 @@ var tt = class {
 function rt(e) {
 	return (nt[e] ?? e).normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
 }
-function it(e) {
+function O(e) {
 	return [...e].map(rt).join("");
 }
-function at(e, t) {
-	let n = it(t).split(/\s+/).filter(Boolean), r = [...e], i = "", a = [];
+function it(e, t) {
+	let n = O(t).split(/\s+/).filter(Boolean), r = [...e], i = "", a = [];
 	r.forEach((e, t) => {
 		let n = rt(e);
 		i += n;
@@ -956,45 +956,71 @@ function at(e, t) {
 	}), s;
 }
 // src/components/category-input.ts
-var ot = class extends C {
+var at = class extends C {
 	constructor(...e) {
-		super(...e), this.value = [], this.suggestions = [], this.placeholder = "", this.removeLabel = (e) => e;
+		super(...e), this.value = [], this.suggestions = [], this.placeholder = "", this.removeLabel = (e) => e, this.open = !1, this.query = "", this.active = -1;
 	}
 	static {
 		this.properties = {
 			value: { attribute: !1 },
 			suggestions: { attribute: !1 },
 			placeholder: {},
-			removeLabel: { attribute: !1 }
+			removeLabel: { attribute: !1 },
+			open: { state: !0 },
+			query: { state: !0 },
+			active: { state: !0 }
 		};
 	}
 	get input() {
 		return this.renderRoot.querySelector("input");
+	}
+	get filtered() {
+		let e = O(this.query.trim()), t = this.suggestions.filter((e) => !this.value.some((t) => O(t) === O(e)));
+		if (!e) return t;
+		let n = t.filter((t) => O(t).startsWith(e)), r = t.filter((t) => !O(t).startsWith(e) && O(t).includes(e));
+		return [...n, ...r];
 	}
 	emit(e) {
 		this.value = e, this.dispatchEvent(new CustomEvent("value-changed", { detail: { value: e } }));
 	}
 	add(e) {
 		let t = e.trim();
-		if (!t || this.value.some((e) => it(e) === it(t))) return;
-		let n = this.suggestions.find((e) => it(e) === it(t));
+		if (!t || this.value.some((e) => O(e) === O(t))) return;
+		let n = this.suggestions.find((e) => O(e) === O(t));
 		this.emit([...this.value, n ?? t]);
 	}
 	removeAt(e) {
 		this.emit(this.value.filter((t, n) => n !== e));
 	}
+	clearInput() {
+		this.input.value = "", this.query = "", this.active = -1;
+	}
 	commit() {
-		this.add(this.input.value), this.input.value = "";
+		this.add(this.input.value), this.clearInput();
+	}
+	pick(e) {
+		this.add(e), this.clearInput(), this.input.focus();
+	}
+	move(e) {
+		let t = this.filtered.length;
+		this.open = !0, t && (this.active = this.active < 0 ? e > 0 ? 0 : t - 1 : (this.active + e + t) % t);
 	}
 	onKeydown(e) {
-		(e.key === "Enter" || e.key === ",") && !e.isComposing ? (e.preventDefault(), this.commit()) : e.key === "Backspace" && !this.input.value && this.value.length && this.removeAt(this.value.length - 1);
+		if (e.isComposing) return;
+		let t = this.open ? this.filtered[this.active] : void 0;
+		e.key === "Enter" || e.key === "," ? (e.preventDefault(), t ? this.pick(t) : this.commit()) : e.key === "ArrowDown" || e.key === "ArrowUp" ? (e.preventDefault(), this.move(e.key === "ArrowDown" ? 1 : -1)) : e.key === "Escape" && this.open ? (e.preventDefault(), e.stopPropagation(), this.open = !1, this.active = -1) : e.key === "Backspace" && !this.input.value && this.value.length && this.removeAt(this.value.length - 1);
 	}
-	onInput(e) {
-		let t = this.input.value;
-		(e.inputType === void 0 || e.inputType === "insertReplacementText") && this.suggestions.includes(t) && this.commit();
+	onInput() {
+		this.query = this.input.value, this.active = -1, this.open = !0;
+	}
+	onBlur() {
+		this.commit(), this.open = !1;
+	}
+	updated() {
+		this.renderRoot.querySelector(".option.active")?.scrollIntoView?.({ block: "nearest" });
 	}
 	render() {
-		let e = this.suggestions.filter((e) => !this.value.some((t) => it(t) === it(e)));
+		let e = this.filtered, t = this.open && e.length > 0;
 		return x`
       <div class="field">
         ${this.value.map((e, t) => x`<span class="chip">
@@ -1004,20 +1030,40 @@ var ot = class extends C {
             </button>
           </span>`)}
         <input
-          list="suggestions"
+          role="combobox"
+          autocomplete="off"
+          aria-autocomplete="list"
+          aria-controls="suggestions"
+          aria-expanded=${t ? "true" : "false"}
+          aria-activedescendant=${t && this.active >= 0 ? `option-${this.active}` : ""}
           placeholder=${this.placeholder}
           aria-label=${this.placeholder}
           @keydown=${this.onKeydown}
           @input=${this.onInput}
-          @blur=${this.commit}
+          @focus=${() => this.open = !0}
+          @click=${() => this.open = !0}
+          @blur=${this.onBlur}
         />
-        <datalist id="suggestions">${e.map((e) => x`<option value=${e}></option>`)}</datalist>
+        <ul id="suggestions" role="listbox" aria-label=${this.placeholder} ?hidden=${!t}>
+          ${e.map((e, t) => x`<li
+              id="option-${t}"
+              class="option ${t === this.active ? "active" : ""}"
+              role="option"
+              aria-selected=${t === this.active ? "true" : "false"}
+              @mousedown=${(e) => e.preventDefault()}
+              @mousemove=${() => this.active = t}
+              @click=${() => this.pick(e)}
+            >
+              ${e}
+            </li>`)}
+        </ul>
       </div>
     `;
 	}
 	static {
 		this.styles = [E, o`
       .field {
+        position: relative;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -1058,12 +1104,39 @@ var ot = class extends C {
         font: inherit;
         font-size: 15px;
       }
+      ul {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        z-index: 5;
+        max-height: 240px;
+        margin: 0;
+        padding: 4px 0;
+        overflow-y: auto;
+        list-style: none;
+        border: 1px solid var(--divider-color);
+        border-radius: 8px;
+        background: var(--card-background-color);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+      ul[hidden] {
+        display: none;
+      }
+      .option {
+        padding: 8px 12px;
+        color: var(--primary-text-color);
+        cursor: pointer;
+      }
+      .option.active {
+        background: var(--secondary-background-color);
+      }
     `];
 	}
 };
-customElements.get("cookbook-category-input") || customElements.define("cookbook-category-input", ot);
+customElements.get("cookbook-category-input") || customElements.define("cookbook-category-input", at);
 // src/components/confirm-dialog.ts
-var st = class extends C {
+var ot = class extends C {
 	constructor(...e) {
 		super(...e), this.open = !1, this.heading = "", this.text = "", this.confirmLabel = "OK", this.cancelLabel = "Cancel", this.onKeydown = (e) => {
 			this.open && e.key === "Escape" && this.fire("cancel");
@@ -1142,19 +1215,19 @@ var st = class extends C {
     `];
 	}
 };
-customElements.get("cookbook-confirm-dialog") || customElements.define("cookbook-confirm-dialog", st);
+customElements.get("cookbook-confirm-dialog") || customElements.define("cookbook-confirm-dialog", ot);
 // node_modules/lit-html/directive.js
-var ct = {
+var st = {
 	ATTRIBUTE: 1,
 	CHILD: 2,
 	PROPERTY: 3,
 	BOOLEAN_ATTRIBUTE: 4,
 	EVENT: 5,
 	ELEMENT: 6
-}, lt = (e) => (...t) => ({
+}, ct = (e) => (...t) => ({
 	_$litDirective$: e,
 	values: t
-}), ut = class {
+}), lt = class {
 	constructor(e) {}
 	get _$AU() {
 		return this._$AM._$AU;
@@ -1168,9 +1241,9 @@ var ct = {
 	update(e, t) {
 		return this.render(...t);
 	}
-}, { I: dt } = Re, ft = (e) => e, pt = () => document.createComment(""), mt = (e, t, n) => {
+}, { I: ut } = Re, dt = (e) => e, ft = () => document.createComment(""), pt = (e, t, n) => {
 	let r = e._$AA.parentNode, i = t === void 0 ? e._$AB : t._$AA;
-	if (n === void 0) n = new dt(r.insertBefore(pt(), i), r.insertBefore(pt(), i), e, e.options);
+	if (n === void 0) n = new ut(r.insertBefore(ft(), i), r.insertBefore(ft(), i), e, e.options);
 	else {
 		let t = n._$AB.nextSibling, a = n._$AM, o = a !== e;
 		if (o) {
@@ -1180,21 +1253,21 @@ var ct = {
 		if (t !== i || o) {
 			let e = n._$AA;
 			for (; e !== t;) {
-				let t = ft(e).nextSibling;
-				ft(r).insertBefore(e, i), e = t;
+				let t = dt(e).nextSibling;
+				dt(r).insertBefore(e, i), e = t;
 			}
 		}
 	}
 	return n;
-}, ht = (e, t, n = e) => (e._$AI(t, n), e), gt = {}, _t = (e, t = gt) => e._$AH = t, vt = (e) => e._$AH, yt = (e) => {
+}, mt = (e, t, n = e) => (e._$AI(t, n), e), ht = {}, gt = (e, t = ht) => e._$AH = t, _t = (e) => e._$AH, vt = (e) => {
 	e._$AR(), e._$AA.remove();
-}, bt = (e, t, n) => {
+}, yt = (e, t, n) => {
 	let r = /* @__PURE__ */ new Map();
 	for (let i = t; i <= n; i++) r.set(e[i], i);
 	return r;
-}, xt = lt(class extends ut {
+}, bt = ct(class extends lt {
 	constructor(e) {
-		if (super(e), e.type !== ct.CHILD) throw Error("repeat() can only be used in text expressions");
+		if (super(e), e.type !== st.CHILD) throw Error("repeat() can only be used in text expressions");
 	}
 	dt(e, t, n) {
 		let r;
@@ -1210,38 +1283,38 @@ var ct = {
 		return this.dt(e, t, n).values;
 	}
 	update(e, [t, n, r]) {
-		let i = vt(e), { values: a, keys: o } = this.dt(t, n, r);
+		let i = _t(e), { values: a, keys: o } = this.dt(t, n, r);
 		if (!Array.isArray(i)) return this.ut = o, a;
 		let s = this.ut ??= [], c = [], l, u, d = 0, f = i.length - 1, p = 0, m = a.length - 1;
 		for (; d <= f && p <= m;) if (i[d] === null) d++;
 		else if (i[f] === null) f--;
-		else if (s[d] === o[p]) c[p] = ht(i[d], a[p]), d++, p++;
-		else if (s[f] === o[m]) c[m] = ht(i[f], a[m]), f--, m--;
-		else if (s[d] === o[m]) c[m] = ht(i[d], a[m]), mt(e, c[m + 1], i[d]), d++, m--;
-		else if (s[f] === o[p]) c[p] = ht(i[f], a[p]), mt(e, i[d], i[f]), f--, p++;
-		else if (l === void 0 && (l = bt(o, p, m), u = bt(s, d, f)), l.has(s[d])) {
+		else if (s[d] === o[p]) c[p] = mt(i[d], a[p]), d++, p++;
+		else if (s[f] === o[m]) c[m] = mt(i[f], a[m]), f--, m--;
+		else if (s[d] === o[m]) c[m] = mt(i[d], a[m]), pt(e, c[m + 1], i[d]), d++, m--;
+		else if (s[f] === o[p]) c[p] = mt(i[f], a[p]), pt(e, i[d], i[f]), f--, p++;
+		else if (l === void 0 && (l = yt(o, p, m), u = yt(s, d, f)), l.has(s[d])) {
 			if (l.has(s[f])) {
 				let t = u.get(o[p]), n = t === void 0 ? null : i[t];
 				if (n === null) {
-					let t = mt(e, i[d]);
-					ht(t, a[p]), c[p] = t;
-				} else c[p] = ht(n, a[p]), mt(e, i[d], n), i[t] = null;
+					let t = pt(e, i[d]);
+					mt(t, a[p]), c[p] = t;
+				} else c[p] = mt(n, a[p]), pt(e, i[d], n), i[t] = null;
 				p++;
-			} else yt(i[f]), f--;
-		} else yt(i[d]), d++;
+			} else vt(i[f]), f--;
+		} else vt(i[d]), d++;
 		for (; p <= m;) {
-			let t = mt(e, c[m + 1]);
-			ht(t, a[p]), c[p++] = t;
+			let t = pt(e, c[m + 1]);
+			mt(t, a[p]), c[p++] = t;
 		}
 		for (; d <= f;) {
 			let e = i[d++];
-			e !== null && yt(e);
+			e !== null && vt(e);
 		}
-		return this.ut = o, _t(e, c), we;
+		return this.ut = o, gt(e, c), we;
 	}
 });
 // node_modules/sortablejs/modular/sortable.core.esm.js
-function St(e, t, n) {
+function xt(e, t, n) {
 	return (t = Dt(t)) in e ? Object.defineProperty(e, t, {
 		value: n,
 		enumerable: !0,
@@ -1249,14 +1322,14 @@ function St(e, t, n) {
 		writable: !0
 	}) : e[t] = n, e;
 }
-function O() {
-	return O = Object.assign ? Object.assign.bind() : function(e) {
+function St() {
+	return St = Object.assign ? Object.assign.bind() : function(e) {
 		for (var t = 1; t < arguments.length; t++) {
 			var n = arguments[t];
 			for (var r in n) ({}).hasOwnProperty.call(n, r) && (e[r] = n[r]);
 		}
 		return e;
-	}, O.apply(null, arguments);
+	}, St.apply(null, arguments);
 }
 function Ct(e, t) {
 	var n = Object.keys(e);
@@ -1272,7 +1345,7 @@ function k(e) {
 	for (var t = 1; t < arguments.length; t++) {
 		var n = arguments[t] == null ? {} : arguments[t];
 		t % 2 ? Ct(Object(n), !0).forEach(function(t) {
-			St(e, t, n[t]);
+			xt(e, t, n[t]);
 		}) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(n)) : Ct(Object(n)).forEach(function(t) {
 			Object.defineProperty(e, t, Object.getOwnPropertyDescriptor(n, t));
 		});
@@ -1586,7 +1659,7 @@ var on = [], sn = { initializeByDefault: !0 }, cn = {
 			var i = r.pluginName;
 			if (e.options[i] || r.initializeByDefault) {
 				var a = new r(e, t, e.options);
-				a.sortable = e, a.options = e.options, e[i] = a, O(n, a.defaults);
+				a.sortable = e, a.options = e.options, e[i] = a, St(n, a.defaults);
 			}
 		}), e.options) if (e.options.hasOwnProperty(i)) {
 			var a = this.modifyOption(e, i, e.options[i]);
@@ -1596,7 +1669,7 @@ var on = [], sn = { initializeByDefault: !0 }, cn = {
 	getEventProperties: function(e, t) {
 		var n = {};
 		return on.forEach(function(r) {
-			typeof r.eventProperties == "function" && O(n, r.eventProperties.call(t[r.pluginName], e));
+			typeof r.eventProperties == "function" && St(n, r.eventProperties.call(t[r.pluginName], e));
 		}), n;
 	},
 	modifyOption: function(e, t, n) {
@@ -1731,7 +1804,7 @@ var Kn = function(e) {
 };
 function X(e, t) {
 	if (!(e && e.nodeType && e.nodeType === 1)) throw `Sortable: \`el\` must be an HTMLElement, not ${{}.toString.call(e)}`;
-	this.el = e, this.options = t = O({}, t), e[R] = this;
+	this.el = e, this.options = t = St({}, t), e[R] = this;
 	var n = {
 		group: null,
 		sort: !0,
@@ -1776,7 +1849,7 @@ function X(e, t) {
 	};
 	for (var r in cn.initializePlugins(this, e, n), n) !(r in t) && (t[r] = n[r]);
 	for (var i in Un(t), this) i.charAt(0) === "_" && typeof this[i] == "function" && (this[i] = this[i].bind(this));
-	this.nativeDraggable = !t.forceFallback && Rn, this.nativeDraggable && (this.options.touchStartThreshold = 1), t.supportPointer ? j(e, "pointerdown", this._onTapStart) : (j(e, "mousedown", this._onTapStart), j(e, "touchstart", this._onTapStart)), this.nativeDraggable && (j(e, "dragover", this), j(e, "dragenter", this)), bn.push(this.el), t.store && t.store.get && this.sort(t.store.get(this) || []), O(this, nn());
+	this.nativeDraggable = !t.forceFallback && Rn, this.nativeDraggable && (this.options.touchStartThreshold = 1), t.supportPointer ? j(e, "pointerdown", this._onTapStart) : (j(e, "mousedown", this._onTapStart), j(e, "touchstart", this._onTapStart)), this.nativeDraggable && (j(e, "dragover", this), j(e, "dragenter", this)), bn.push(this.el), t.store && t.store.get && this.sort(t.store.get(this) || []), St(this, nn());
 }
 X.prototype = {
 	constructor: X,
@@ -2243,7 +2316,7 @@ sr.prototype = {
 		r ? this.sortable.el.insertBefore(t, r) : this.sortable.el.appendChild(t), this.sortable.animateAll(), n && n.animateAll();
 	},
 	drop: or
-}, O(sr, { pluginName: "revertOnSpill" });
+}, St(sr, { pluginName: "revertOnSpill" });
 function cr() {}
 cr.prototype = {
 	onSpill: function(e) {
@@ -2251,7 +2324,7 @@ cr.prototype = {
 		n.captureAnimationState(), t.parentNode && t.parentNode.removeChild(t), n.animateAll();
 	},
 	drop: or
-}, O(cr, { pluginName: "removeOnSpill" });
+}, St(cr, { pluginName: "removeOnSpill" });
 // src/editor-rows.ts
 var lr = 1, Z = (e, t = "") => ({
 	id: lr++,
@@ -2389,7 +2462,7 @@ var hr = class extends C {
 		let e = 0;
 		return x`
       <ol>
-        ${xt(this.rows, (e) => e.id, (t, n) => {
+        ${bt(this.rows, (e) => e.id, (t, n) => {
 			let r = t.kind === "section";
 			r || e++;
 			let i = { placeholder: r ? this.labels.sectionPlaceholder : this.labels.itemPlaceholder };
@@ -3567,7 +3640,7 @@ var Mr = class extends C {
                 </div>`}
             ${t.matched_ingredients?.length ? x`<ul class="matches">
                   ${t.matched_ingredients.map((e) => x`<li>
-                      ${at(e, this.resultsQuery).map((e) => e.match ? x`<mark>${e.text}</mark>` : e.text)}
+                      ${it(e, this.resultsQuery).map((e) => e.match ? x`<mark>${e.text}</mark>` : e.text)}
                     </li>`)}
                 </ul>` : S}
             <div class="chips">${t.categories.map((e) => x`<span class="chip">${e}</span>`)}</div>

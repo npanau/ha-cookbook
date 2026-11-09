@@ -146,7 +146,9 @@ Modification TypeScript : le watch reconstruit, il suffit de recharger la page (
 - **Accès GitHub** : `gh` est authentifié sur le poste (tickets, PR, runs CI : `gh run list`, `gh run view --log-failed`).
 - La version de l'intégration (`manifest.json`) sert aussi au cache-busting du bundle (`?v=`).
 - **Publier une version** : incrémenter `version` dans `manifest.json` et `frontend/package.json` (`npm version X.Y.Z --no-git-tag-version`, la première sert aussi au cache du
-  bundle), commiter, puis `git tag vX.Y.Z && git push --tags` et `gh release create vX.Y.Z --notes …`. HACS propose
+  bundle), renommer la section « Unreleased » de `CHANGELOG.md` en `X.Y.Z` (son contenu sert de notes de version),
+  commiter, puis `git tag vX.Y.Z && git push --tags` et `gh release create vX.Y.Z --notes …`.
+  Entre deux versions, chaque changement (PR Renovate fusionnée comprise) s'ajoute sous « Unreleased ». HACS propose
   les releases GitHub aux utilisateurs (sans `zip_release` : il télécharge `custom_components/cookbook` au tag).
 
 ## Conventions

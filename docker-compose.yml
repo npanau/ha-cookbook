@@ -44,7 +44,7 @@ services:
 
   # Synthetic recipe pages for the import E2E tests (http://recipes-site:8000/...).
   recipes-site:
-    image: python:3.14-alpine
+    image: python:3.15-alpine
     container_name: cookbook-recipes-site
     command: python -m http.server 8000 --directory /sites
     volumes:

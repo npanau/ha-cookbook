@@ -15,7 +15,7 @@
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/npanau/ha-cookbook/issues",
   "requirements": [
-    "recipe-scrapers==15.13.0"
+    "recipe-scrapers==15.14.0"
   ],
   "single_config_entry": true,
   "version": "0.1.2"

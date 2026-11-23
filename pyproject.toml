@@ -9,7 +9,7 @@ dev = [
   "pytest-homeassistant-custom-component==0.13.375",
   "home-assistant-frontend==20260930.5",
   # Same version as custom_components/cookbook/manifest.json "requirements".
-  "recipe-scrapers==15.13.0",
+  "recipe-scrapers==15.14.0",
   "ruff",
 ]
 

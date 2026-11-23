@@ -16,7 +16,9 @@ when a version is published. Earlier versions: see the [GitHub releases](https:/
 
 ### Maintenance
 
+- recipe-scrapers 15.14.0 (#10)
 - Node.js 26 for the frontend tooling (`.nvmrc`, Docker `frontend` service) (#7)
 - Frontend dev dependencies: Playwright 1.65, Vite patch update (#5)
 - Python 3.15 image for the synthetic recipe site used by the E2E tests (#6)
 - Frontend dev dependencies: Playwright 1.65.1, Vite 8.3.8 (#8)
+- Frontend dev dependency: Vitest 5.1.1 (#9)

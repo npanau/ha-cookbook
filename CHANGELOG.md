@@ -3,7 +3,7 @@
 Changes waiting for the next release are listed under **Unreleased**; they become the GitHub release notes
 when a version is published. Earlier versions: see the [GitHub releases](https://github.com/npanau/ha-cookbook/releases).
 
-## Unreleased
+## 0.1.3
 
 ### Fixed
 

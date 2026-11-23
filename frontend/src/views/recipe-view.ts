@@ -1,6 +1,8 @@
 import { LitElement, css, html, nothing } from "lit";
 import { CookbookApi, isApiError } from "../api";
 import "../components/confirm-dialog";
+import { ConnectionWatcher, REFRESH_AFTER_MS } from "../connection";
+import { formatError, isConnectionError } from "../errors";
 import { formatDate, formatDuration, formatServings, groupBySection, totalTime } from "../format";
 import { type Localize, getLanguage, getLocalize } from "../i18n";
 import { printRecipe } from "../print";
@@ -61,6 +63,12 @@ export class CookbookRecipeView extends LitElement {
 
   private wakeLock: WakeLockSentinel | null = null;
 
+  /** Silent reload after a reconnection, and before the signed image URLs expire. */
+  private connection = new ConnectionWatcher(this, {
+    reload: () => void this.load({ silent: true }),
+    maxAge: REFRESH_AFTER_MS,
+  });
+
   private onVisibilityChange = () => {
     // The browser releases the wake lock when the page is hidden: take it back.
     if (this.awake && document.visibilityState === "visible") void this.requestWakeLock();
@@ -81,16 +89,21 @@ export class CookbookRecipeView extends LitElement {
     if (changed.has("recipeId") && this.recipeId) void this.load();
   }
 
-  private async load() {
+  /** `silent`: keep the displayed recipe (and the ticks) while reloading. */
+  private async load({ silent = false } = {}) {
     const id = this.recipeId;
-    this.recipe = null;
-    this.error = null;
-    this.notFound = false;
-    this.checked = new Set(JSON.parse(readStorage(checksKey(id)) ?? "[]") as string[]);
+    if (!silent) {
+      this.recipe = null;
+      this.error = null;
+      this.notFound = false;
+      this.checked = new Set(JSON.parse(readStorage(checksKey(id)) ?? "[]") as string[]);
+    }
     try {
       const recipe = await new CookbookApi(this.hass).get(id);
       if (id !== this.recipeId) return;
       this.recipe = recipe;
+      this.error = null;
+      this.connection.loaded();
       // ?parts=6 keeps the chosen number on reload; a new visit starts from the recipe's.
       const parts = Number(new URLSearchParams(location.search).get("parts"));
       this.servings = recipe.servings && Number.isInteger(parts) && parts >= 1 && parts <= MAX_SERVINGS
@@ -98,11 +111,15 @@ export class CookbookRecipeView extends LitElement {
         : recipe.servings;
     } catch (error) {
       if (id !== this.recipeId) return;
-      if (isApiError(error) && error.code === "not_found") {
+      if (isConnectionError(error)) {
+        // Nothing to show: reloaded once the connection is back.
+        this.connection.connectionLost();
+      } else if (isApiError(error) && error.code === "not_found") {
         this.notFound = true;
+      } else if (silent && this.recipe) {
+        console.error("[cookbook] reload failed", error); // keep showing the recipe
       } else {
-        const message = isApiError(error) ? error.message : String(error);
-        this.error = getLocalize(this.hass)("error", { message });
+        this.error = formatError(error, getLocalize(this.hass));
       }
     }
   }
@@ -173,8 +190,7 @@ export class CookbookRecipeView extends LitElement {
       writeStorage(checksKey(this.recipeId), null);
       navigate(listUrl(), { replace: true });
     } catch (error) {
-      const message = isApiError(error) ? error.message : String(error);
-      this.error = getLocalize(this.hass)("error", { message });
+      this.error = formatError(error, getLocalize(this.hass));
     }
   }
 

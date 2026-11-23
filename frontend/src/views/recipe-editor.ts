@@ -5,6 +5,8 @@ import "../components/confirm-dialog";
 import "../components/item-list-editor";
 import "../components/photo-input";
 import type { ItemListLabels } from "../components/item-list-editor";
+import { ConnectionWatcher } from "../connection";
+import { formatError, isConnectionError } from "../errors";
 import { formatDuration } from "../format";
 import { type Localize, type MessageKey, getLocalize } from "../i18n";
 import { listUrl, navigate, recipeUrl } from "../router";
@@ -156,6 +158,16 @@ export class CookbookRecipeEditor extends LitElement {
 
   /** Last loaded/saved version: base of the conflict check and of the dirty state. */
   private original: Recipe | null = null;
+
+  /**
+   * After a reconnection, only a load that failed is retried: a reload would overwrite the form.
+   * Saves are not retried; their error says to try again.
+   */
+  private connection = new ConnectionWatcher(this, {
+    reload: () => {
+      if (this.loading && this.recipeId) void this.load(this.recipeId);
+    },
+  });
   private snapshot = "";
 
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -273,16 +285,19 @@ export class CookbookRecipeEditor extends LitElement {
       if (id === this.recipeId) this.reset(recipe);
     } catch (error) {
       if (id !== this.recipeId) return;
+      if (isConnectionError(error)) {
+        // Keep "loading": retried once the connection is back (see `connection`).
+        this.connection.connectionLost();
+        return;
+      }
       if (isApiError(error) && error.code === "not_found") this.notFound = true;
       else this.showError(error);
-    } finally {
-      if (id === this.recipeId) this.loading = false;
     }
+    if (id === this.recipeId) this.loading = false;
   }
 
   private showError(error: unknown) {
-    const message = isApiError(error) ? error.message : String(error);
-    this.error = this.t("error", { message });
+    this.error = formatError(error, this.t);
   }
 
   private setField<K extends keyof EditorForm>(field: K, value: EditorForm[K]) {
@@ -352,8 +367,7 @@ export class CookbookRecipeEditor extends LitElement {
       this.setPhoto({ kind: "keep" });
       return true;
     } catch (error) {
-      const message = isApiError(error) ? error.message : String(error);
-      this.error = this.t("photo_failed", { message });
+      this.error = formatError(error, this.t, "photo_failed");
       return false;
     }
   }

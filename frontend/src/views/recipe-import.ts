@@ -1,5 +1,6 @@
 import { LitElement, css, html, nothing } from "lit";
 import { CookbookApi, isApiError } from "../api";
+import { formatError } from "../errors";
 import { type Localize, type MessageKey, getLocalize } from "../i18n";
 import { navigate, recipeUrl } from "../router";
 import { sharedStyles } from "../styles";
@@ -84,8 +85,7 @@ export class CookbookRecipeImport extends LitElement {
     if (isApiError(error) && ERROR_CODES.includes(error.code)) {
       return this.t(`import_error_${error.code}` as MessageKey, { message: error.message });
     }
-    const message = isApiError(error) ? error.message : String(error);
-    return this.t("error", { message });
+    return formatError(error, this.t);
   }
 
   private restart() {

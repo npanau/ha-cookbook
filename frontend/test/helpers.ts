@@ -3,6 +3,33 @@ import type { HomeAssistant, Recipe } from "../src/types";
 
 type Handler = (msg: Record<string, unknown>) => unknown;
 
+/** Rejection of a WebSocket command pending when the socket closed (home-assistant-js-websocket). */
+export const CONNECTION_LOST = { type: "result", success: false, error: { code: 3, message: "Connection lost" } };
+
+/** Fake `hass.connection`: `drop()` / `restore()` fire "disconnected" / "ready" like the real one. */
+export function mockConnection() {
+  const listeners = new Map<string, Set<() => void>>();
+  const fire = (event: string) => listeners.get(event)?.forEach((callback) => callback());
+  const connection = {
+    connected: true,
+    addEventListener: vi.fn((event: string, callback: () => void) => {
+      if (!listeners.has(event)) listeners.set(event, new Set());
+      listeners.get(event)!.add(callback);
+    }),
+    removeEventListener: vi.fn((event: string, callback: () => void) => listeners.get(event)?.delete(callback)),
+    listenerCount: () => [...listeners.values()].reduce((sum, set) => sum + set.size, 0),
+    drop() {
+      connection.connected = false;
+      fire("disconnected");
+    },
+    restore() {
+      connection.connected = true;
+      fire("ready");
+    },
+  };
+  return connection;
+}
+
 /** Fake `hass`: callWS dispatches on the command type; a thrown/returned Error rejects. */
 export function mockHass(
   handlers: Record<string, Handler>,
@@ -27,9 +54,12 @@ export function mockHass(
     user: { id: "u1", name: "Nicolas", is_admin: options.admin ?? false },
     language: options.language ?? "fr",
     locale: { language: options.language ?? "fr" },
+    connected: true,
+    connection: mockConnection(),
     callWS,
   } as unknown as HomeAssistant;
-  return { hass, callWS, fetchWithAuth };
+  const connection = (hass as unknown as { connection: ReturnType<typeof mockConnection> }).connection;
+  return { hass, callWS, fetchWithAuth, connection };
 }
 
 export function apiError(code: string, message = code) {

@@ -5,6 +5,15 @@ when a version is published. Earlier versions: see the [GitHub releases](https:/
 
 ## Unreleased
 
+### Fixed
+
+- After the connection to Home Assistant was lost (phone asleep, network change), the panel showed
+  "Something went wrong: [object Object]". It now waits for the connection to come back and reloads the
+  current page silently; an error is only shown if that reload fails.
+- Pages left open for a long time (wall tablet) reload their data before the signed photo links expire.
+- Error messages are readable and translated for every kind of error (lost connection, HTTP error of the
+  photo upload…); the full error is logged in the browser console.
+
 ### Maintenance
 
 - Node.js 26 for the frontend tooling (`.nvmrc`, Docker `frontend` service) (#7)

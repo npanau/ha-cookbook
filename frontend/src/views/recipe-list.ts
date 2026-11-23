@@ -1,5 +1,7 @@
 import { LitElement, css, html, nothing } from "lit";
-import { CookbookApi, isApiError } from "../api";
+import { CookbookApi } from "../api";
+import { ConnectionWatcher, REFRESH_AFTER_MS } from "../connection";
+import { formatError, isConnectionError } from "../errors";
 import { formatDuration, totalTime } from "../format";
 import { getLocalize } from "../i18n";
 import { IMPORT_URL, NEW_URL, navigate, recipeUrl, rememberListSearch } from "../router";
@@ -33,6 +35,15 @@ export class CookbookRecipeList extends LitElement {
 
   private debounce?: ReturnType<typeof setTimeout>;
   private requestId = 0;
+
+  /** Silent reload after a reconnection, and before the signed thumbnail URLs expire. */
+  private connection = new ConnectionWatcher(this, {
+    reload: () => {
+      void this.loadCategories();
+      void this.loadRecipes();
+    },
+    maxAge: REFRESH_AFTER_MS,
+  });
 
   connectedCallback() {
     super.connectedCallback();
@@ -74,6 +85,7 @@ export class CookbookRecipeList extends LitElement {
       this.resultsQuery = query;
       this.recipes = recipes;
       this.error = null;
+      this.connection.loaded();
     } catch (error) {
       if (id === this.requestId) this.showError(error);
     } finally {
@@ -82,8 +94,9 @@ export class CookbookRecipeList extends LitElement {
   }
 
   private showError(error: unknown) {
-    const message = isApiError(error) ? error.message : String(error);
-    this.error = getLocalize(this.hass)("error", { message });
+    // Lost connection: keep the current display, reloaded once the connection is back.
+    if (isConnectionError(error)) this.connection.connectionLost();
+    else this.error = formatError(error, getLocalize(this.hass));
   }
 
   private syncUrl() {

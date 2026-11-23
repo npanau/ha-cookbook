@@ -1,8 +1,19 @@
+/** The parts of the home-assistant-js-websocket Connection we use. */
+export interface HassConnection {
+  /** True while the socket is open. */
+  readonly connected: boolean;
+  addEventListener(event: "ready" | "disconnected", callback: () => void): void;
+  removeEventListener(event: "ready" | "disconnected", callback: () => void): void;
+}
+
 /** Minimal subset of the Home Assistant frontend `hass` object we rely on. */
 export interface HomeAssistant {
   user?: { id: string; name: string; is_admin: boolean };
   language: string;
   locale?: { language: string };
+  /** False while the WebSocket is reconnecting. */
+  connected?: boolean;
+  connection?: HassConnection;
   callWS<T>(msg: { type: string; [key: string]: unknown }): Promise<T>;
   /** fetch() with the HA token (used for the photo upload). */
   fetchWithAuth(path: string, init?: RequestInit): Promise<Response>;

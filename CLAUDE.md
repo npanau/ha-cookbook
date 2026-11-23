@@ -52,6 +52,14 @@ Nicolas déclenche lui-même : ne jamais s'y connecter, y copier des fichiers ou
   - `cookbook-panel.ts` (racine : barre d'outils, routage), `router.ts` (sous-routes `/cookbook`,
     `/cookbook/recipe/<id>`, `/new`, `/edit/<id>`, `/import[?url=…]` ; navigation via `history.pushState` + événement `location-changed`, comme HA),
     `api.ts` (client typé des commandes WS), `views/` (écrans), `components/`, `print.ts` (impression via iframe).
+  - **Erreurs** : tout affichage d'erreur passe par `formatError(err, t, clé?)` (`errors.ts`) — Error, erreur WS
+    `{code, message}`, rejet `{type: "result", error: {code: 3}}` / `3` de la connexion perdue, erreurs HTTP de
+    l'envoi de photo, chaîne ; message traduit, objet complet dans `console.error`. Jamais de `String(error)`.
+  - **Reconnexion** (`connection.ts`, `ConnectionWatcher`, contrôleur Lit) : une erreur de connexion
+    (`isConnectionError`) n'est pas affichée ; la vue recharge silencieusement au retour de la connexion
+    (événement `ready` de `hass.connection` ou `hass.connected` repassé à `true`), **seulement après une vraie
+    coupure**. Fiche et liste se rechargent aussi après 12 h (liens signés des photos valables 24 h) ; l'éditeur ne
+    réessaie qu'un chargement échoué, jamais par-dessus le formulaire.
   - **Composants maison uniquement**, stylés avec les variables CSS du thème HA (`styles.ts`). Ne pas utiliser les
     composants internes de HA (`ha-textfield`, `ha-dialog`…) : instables et pas toujours chargés. Exceptions :
     `ha-menu-button`, `ha-icon`.

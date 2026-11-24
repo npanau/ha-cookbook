@@ -1,5 +1,5 @@
 # Dev shortcuts — the local Docker HA only, never production.
-.PHONY: up up-ha down logs restart-ha watch build seed sync-ha typecheck test test-py test-front e2e e2e-headed lint format
+.PHONY: up up-ha down logs restart-ha watch build seed sync-ha typecheck test test-py test-front e2e e2e-headed screenshots lint format
 
 up: ## HA + frontend watch, both in Docker
 	docker compose --profile frontend up -d
@@ -56,6 +56,12 @@ e2e: ## E2E tests (desktop + mobile)
 
 e2e-headed: ## E2E tests with a visible browser
 	$(MAKE) e2e E2E_EXTRA="--headed"
+
+screenshots: ## README screenshots (docs/screenshots/), on the throwaway E2E HA
+	cd frontend && npm run build
+	docker compose --profile e2e up -d --force-recreate homeassistant-e2e
+	cd frontend && npx playwright test -c screenshots.config.ts; status=$$?; \
+		cd .. && docker compose --profile e2e stop homeassistant-e2e; exit $$status
 
 lint:
 	uv run ruff check .

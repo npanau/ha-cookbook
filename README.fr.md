@@ -8,6 +8,19 @@ Un gestionnaire de recettes intégré à Home Assistant, dans un panneau de la b
 
 > Première version (0.1) : retours et signalements de bugs bienvenus dans les tickets.
 
+## Captures d'écran
+
+<img src="https://raw.githubusercontent.com/npanau/ha-cookbook/main/docs/screenshots/fr-list.jpg" alt="Liste des recettes et filtres par catégorie" width="100%">
+
+<img src="https://raw.githubusercontent.com/npanau/ha-cookbook/main/docs/screenshots/fr-recipe.jpg" alt="Fiche recette avec ingrédients et étapes" width="62%"> <img src="https://raw.githubusercontent.com/npanau/ha-cookbook/main/docs/screenshots/fr-mobile.jpg" alt="Recette sur téléphone, thème sombre" width="30%">
+
+<details>
+<summary>Éditeur</summary>
+
+<img src="https://raw.githubusercontent.com/npanau/ha-cookbook/main/docs/screenshots/fr-editor.jpg" alt="Éditeur de recette" width="100%">
+
+</details>
+
 ## Installation (dépôt personnalisé HACS)
 
 [![Ouvrir ce dépôt dans HACS sur votre Home Assistant.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=npanau&repository=ha-cookbook&category=integration)

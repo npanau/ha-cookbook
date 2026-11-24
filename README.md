@@ -8,6 +8,19 @@ A recipe manager that lives in a Home Assistant sidebar panel. No extra account:
 
 > First release (0.1): feedback and bug reports are welcome in the issues.
 
+## Screenshots
+
+<img src="https://raw.githubusercontent.com/npanau/ha-cookbook/main/docs/screenshots/en-list.jpg" alt="Recipe list with category filters" width="100%">
+
+<img src="https://raw.githubusercontent.com/npanau/ha-cookbook/main/docs/screenshots/en-recipe.jpg" alt="Recipe sheet with ingredients and steps" width="62%"> <img src="https://raw.githubusercontent.com/npanau/ha-cookbook/main/docs/screenshots/en-mobile.jpg" alt="Recipe on a phone, dark theme" width="30%">
+
+<details>
+<summary>Editor</summary>
+
+<img src="https://raw.githubusercontent.com/npanau/ha-cookbook/main/docs/screenshots/en-editor.jpg" alt="Recipe editor" width="100%">
+
+</details>
+
 ## Installation (HACS custom repository)
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=npanau&repository=ha-cookbook&category=integration)
